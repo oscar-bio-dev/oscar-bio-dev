@@ -1,74 +1,74 @@
 # Oscar Mora - Digital Portfolio & Conservation Technology Hub
 
-Este repositorio alberga el portafolio digital y entorno de desarrollo interactivo de **Oscar Mora**, Biólogo Marino e Ingeniero Embebido (Conservation Technologist).
+This repository hosts the digital portfolio and interactive development environment of **Oscar Mora**, Marine Biologist and Embedded Engineer (Conservation Technologist).
 
-## 🚀 Misión y Arquitectura (Grado Espacial / Industrial)
+## 🚀 Mission and Architecture (Space / Industrial Grade)
 
-Este proyecto no es un simple sitio web. Es un **Hub de Ingeniería y Telemetría** diseñado desde cero con filosofía *bare-metal* y *zero-cost abstractions* usando **Rust**. La meta es construir una plataforma interactiva, concurrente y de grado industrial para la visualización de datos de sensores ambientales (TinyML, RS485, IoT) en tiempo real, sirviendo además como currículum vivo.
-
----
-
-## 🗺️ Roadmap de Ingeniería
-
-Para asegurar una calidad implacable y cumplir con estándares industriales, el desarrollo de la plataforma está dividido en las siguientes fases:
-
-### 🟢 Fase 1: Ignición y Rigor (Fundamentos)
-- [x] **Configuración del entorno:** Cimientos de titanio con `rust-toolchain.toml`, reglas estrictas en `.rustfmt.toml` y configuraciones avanzadas para `rust-analyzer`.
-- [x] **Validación de tipos y seguridad:** Reglas pedantes de Clippy (`clippy::all`, `clippy::pedantic`, `clippy::nursery`).
-- [x] **Core del Router:** Implementación base usando `axum` sobre `tokio`.
-- [x] **Static Server:** Servicio de archivos estáticos (CSS/assets) vía `tower-http`.
-- [x] **Auditoría y CI/CD:** Hooks de pre-commit, `cargo-audit` (detección de vulnerabilidades), `cargo-deny` (licencias) y pipelines de GitHub Actions.
-- [x] **Testing Básico:** Integración de `cargo test` como requisito obligatorio en el CI/CD para la validación continua de la lógica base.
-
-### 🟡 Fase 2: Estructura Estática y Contratos API
-- [ ] **Modularización Arquitectónica:** Patrón de Arquitectura Limpia (Clean Architecture), dividiendo endpoints en dominios lógicos (ej. `/api/telemetry`, `/portfolio`).
-- [ ] **Motor de Plantillas SSR:** Jerarquía de layouts compilados en el binario usando `askama` (cero parsing en tiempo de ejecución).
-- [ ] **Gestión de Errores Tipificada:** Uso de `thiserror` para el dominio y `anyhow` para la aplicación, con mapeo automático a HTTP status codes.
-- [ ] **Contratos de API (OpenAPI):** Generación automática de especificaciones Swagger/OpenAPI usando `utoipa` para documentar la ingesta de sensores.
-- [ ] **Documentación Interna (rustdoc):** Uso estricto de doc-comments (`///`) en estructuras y funciones públicas para generar manuales técnicos vivos automáticos con `cargo doc`.
-
-### 🟠 Fase 3: Telemetría, Estado y Resiliencia
-- [ ] **Observabilidad Industrial:** Logs estructurados y asíncronos mediante `tracing`, con miras a exportar a **OpenTelemetry (OTel)** (Prometheus/Grafana).
-- [ ] **Estado Concurrente Compartido:** Inyección de dependencias seguras (`State`, `Arc`, `RwLock`) en Axum para manejar el estado global de la flota de sensores.
-- [ ] **Graceful Shutdown:** Intercepción de señales del sistema (SIGINT/SIGTERM) para un apagado seguro sin pérdida de telemetría en vuelo.
-- [ ] **Protección de Tráfico:** Middlewares de `tower` para *Rate Limiting* y *Timeout*, evitando saturación por ráfagas de datos de hardware defectuoso.
-- [ ] **Pruebas Rigurosas (Mocking & Fuzzing):** Uso de `proptest` (Property-Based Testing) contra los endpoints y `mockall` para simular y testear el comportamiento sin el hardware físico conectado.
-
-### 🔵 Fase 4: Persistencia y Flujo Time-Series
-- [ ] **Capa de Base de Datos:** `sqlx` asíncrono con comprobación de queries en tiempo de compilación.
-- [ ] **Almacenamiento Geoespacial/Temporal:** Preparación para PostgreSQL con extensiones **PostGIS** y **TimescaleDB** (ideal para modelado y retención de series temporales ambientales).
-- [ ] **Infraestructura como Código (IaC):** Levantamiento determinista y orquestación de la base de datos usando `docker-compose` (local) y Terraform/Nix (para despliegues en producción).
-- [ ] **Tolerancia a Fallos y Retención:** Implementación de un buffer de retención de datos (colas de mensajes como canales asíncronos de Tokio o Redis) para no perder ráfagas de datos críticos en caso de saturación o caída del DB.
-- [ ] **Ingesta IoT Robusta:** Deserialización ultra-rápida (`serde`) y validación estricta de payloads (`validator`) antes de tocar la base de datos.
-- [ ] **Protocolos Bidireccionales:** Implementación de WebSockets o puente HTTP-to-MQTT para control remoto y configuración *Over-The-Air* (OTA) de los biosensores.
-
-### 🟣 Fase 5: Edge AI e Inferencia (TinyML)
-- [ ] **Motor de Inferencia Backend:** Integración de modelos de Machine Learning (exportados de Edge Impulse) directamente en Rust usando `tract` u `ort`.
-- [ ] **Clasificación en Tiempo Real:** Análisis de datos de calidad de agua/suelo en el servidor para generar alertas inmediatas antes de persistir.
-- [ ] **Gemelo Digital (Digital Twin):** Representación virtual en memoria del estado actual de cada dispositivo de hardware (RP2350, ESP32) desplegado en campo.
-
-### ⚫ Fase 6: Grado Espacial (Orbital & Wasm)
-- [ ] **Frontend Reactivo Wasm:** Interfaz gráfica interactiva (dashboard) compilada a **WebAssembly** (ej. Leptos o Dioxus), eliminando frameworks JS externos.
-- [ ] **Optimización Extrema:** Binarios en modo release optimizados con LTO (*Link Time Optimization*), `strip` de símbolos y `opt-level = "z"`.
-- [ ] **Contenedorización Distroless:** Creación de imágenes Docker ultra-ligeras (`scratch` o `distroless`, < 15MB) blindadas contra vulnerabilidades del sistema operativo.
-- [ ] **Seguridad de Hardware (mTLS):** Autenticación TLS mutua usando `rustls` para garantizar que solo sensores con certificados criptográficos válidos puedan publicar datos.
+This project is not a simple website. It is an **Engineering and Telemetry Hub** designed from scratch with a *bare-metal* and *zero-cost abstractions* philosophy using **Rust**. The goal is to build an interactive, concurrent, and industrial-grade platform for real-time visualization of environmental sensor data (TinyML, RS485, IoT), while simultaneously serving as a living resume.
 
 ---
 
-## 🛠️ Entorno de Trabajo Local
+## 🗺️ Engineering Roadmap
 
-Este repositorio está configurado con las reglas más estrictas. Para contribuir o levantar el proyecto:
+To ensure relentless quality and comply with industrial standards, the platform's development is divided into the following phases:
 
-1. **Herramientas requeridas:** Rust (vía `rustup`). La versión (`stable`) y los componentes se fijarán automáticamente gracias a `rust-toolchain.toml`.
-2. **Ejecución del servidor en modo desarrollo:**
+### 🟢 Phase 1: Ignition and Rigor (Foundations)
+- [x] **Environment Setup:** Titanium foundations with `rust-toolchain.toml`, strict rules in `.rustfmt.toml`, and advanced configurations for `rust-analyzer`.
+- [x] **Type Safety and Validation:** Pedantic Clippy rules (`clippy::all`, `clippy::pedantic`, `clippy::nursery`).
+- [x] **Router Core:** Base implementation using `axum` on top of `tokio`.
+- [x] **Static Server:** Static file serving (CSS/assets) via `tower-http`.
+- [x] **Auditing and CI/CD:** Pre-commit hooks, `cargo-audit` (vulnerability detection), `cargo-deny` (licenses), and GitHub Actions pipelines.
+- [x] **Basic Testing:** Integration of `cargo test` as a mandatory requirement in the CI/CD pipeline for continuous validation of the core logic.
+
+### 🟡 Phase 2: Static Structure and API Contracts
+- [ ] **Architectural Modularization:** Clean Architecture pattern, dividing endpoints into logical domains (e.g., `/api/telemetry`, `/portfolio`).
+- [ ] **SSR Template Engine:** Hierarchy of layouts compiled directly into the binary using `askama` (zero parsing at runtime).
+- [ ] **Typed Error Handling:** Use of `thiserror` for the domain and `anyhow` for the application, with automatic mapping to HTTP status codes.
+- [ ] **API Contracts (OpenAPI):** Automatic generation of Swagger/OpenAPI specifications using `utoipa` to document sensor ingestion.
+- [ ] **Internal Documentation (rustdoc):** Strict use of doc-comments (`///`) on public structs and functions to generate live technical manuals automatically with `cargo doc`.
+
+### 🟠 Phase 3: Telemetry, State, and Resilience
+- [ ] **Industrial Observability:** Structured and asynchronous logging via `tracing`, aiming to export to **OpenTelemetry (OTel)** (Prometheus/Grafana).
+- [ ] **Concurrent Shared State:** Safe dependency injection (`State`, `Arc`, `RwLock`) in Axum to handle the global state of the sensor fleet.
+- [ ] **Graceful Shutdown:** Interception of system signals (SIGINT/SIGTERM) for a safe shutdown without losing telemetry data in flight.
+- [ ] **Traffic Protection:** `tower` middlewares for *Rate Limiting* and *Timeout*, preventing saturation from burst data sent by faulty hardware.
+- [ ] **Rigorous Testing (Mocking & Fuzzing):** Use of `proptest` (Property-Based Testing) against endpoints and `mockall` to mock and test behavior without physical hardware connected.
+
+### 🔵 Phase 4: Persistence and Time-Series Flow
+- [ ] **Database Layer:** Asynchronous `sqlx` with compile-time query verification.
+- [ ] **Geospatial/Temporal Storage:** Preparation for PostgreSQL with **PostGIS** and **TimescaleDB** extensions (ideal for environmental time-series modeling and retention).
+- [ ] **Infrastructure as Code (IaC):** Deterministic spin-up and orchestration of the database using `docker-compose` (local) and Terraform/Nix (for production deployments).
+- [ ] **Fault Tolerance and Retention:** Implementation of a data retention buffer (message queues like Tokio async channels or Redis) to avoid losing critical burst data during database saturation or crashes.
+- [ ] **Robust IoT Ingestion:** Ultra-fast deserialization (`serde`) and strict payload validation (`validator`) before touching the database.
+- [ ] **Bidirectional Protocols:** Implementation of WebSockets or an HTTP-to-MQTT bridge for remote control and *Over-The-Air* (OTA) configuration of biosensors.
+
+### 🟣 Phase 5: Edge AI and Inference (TinyML)
+- [ ] **Backend Inference Engine:** Integration of Machine Learning models (exported from Edge Impulse) directly into Rust using `tract` or `ort`.
+- [ ] **Real-Time Classification:** Server-side analysis of water/soil quality data to generate immediate alerts before persistence.
+- [ ] **Digital Twin:** In-memory virtual representation of the current state of each hardware device (RP2350, ESP32) deployed in the field.
+
+### ⚫ Phase 6: Space Grade (Orbital & Wasm)
+- [ ] **Reactive Wasm Frontend:** Interactive graphical interface (dashboard) compiled to **WebAssembly** (e.g., Leptos or Dioxus), eliminating external JS frameworks.
+- [ ] **Extreme Optimization:** Release binaries optimized with LTO (*Link Time Optimization*), symbol `strip`, and `opt-level = "z"`.
+- [ ] **Distroless Containerization:** Creation of ultra-lightweight Docker images (`scratch` or `distroless`, < 15MB) shielded against OS-level vulnerabilities.
+- [ ] **Hardware Security (mTLS):** Mutual TLS authentication using `rustls` to ensure that only sensors with valid cryptographic certificates can publish data.
+
+---
+
+## 🛠️ Local Development Environment
+
+This repository is configured with the strictest rules. To contribute or spin up the project:
+
+1. **Required tools:** Rust (via `rustup`). The version (`stable`) and components will be automatically pinned thanks to `rust-toolchain.toml`.
+2. **Running the server in development mode:**
    ```bash
    cargo run
    ```
-3. **Revisión estática obligatoria (Linting):**
+3. **Mandatory static analysis (Linting):**
    ```bash
    cargo clippy --workspace --all-targets --all-features -- -D warnings
    ```
-4. **Formateo del Código:**
+4. **Code Formatting:**
    ```bash
    cargo fmt --all -- --check
    ```
