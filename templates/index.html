@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+    <header class="terminal-header">
+        <h1>[oscar@suse_workstation ~]$ ./portfolio</h1>
+        <p class="subtitle">> {{ role }}</p>
+    </header>
+    
+    <main>
+        <section id="about">
+            <h2>> cat about_me.txt</h2>
+            <p>Traduciendo la complejidad biológica en soluciones de hardware de ultra-bajo consumo para el monitoreo ecológico.</p>
+        </section>
+
+        <section id="projects">
+            <h2>> ls -l ./proyectos/</h2>
+            <ul>
+                <li><strong>[DIR]</strong> <a href="#">medidor_do_baremetal/</a></li>
+                <li><strong>[DIR]</strong> <a href="#">smart_soil_monitor/</a></li>
+                <li><strong>[DIR]</strong> <a href="#">setaesense_startup/</a></li>
+            </ul>
+        </section>
+    </main>
+    
+    <footer>
+        <p>Construido en Rust puro. Cero frameworks JS inflados. 100% tipado estático.</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,24 @@
+[package]
+name = "oscar-bio-dev"
+version = "0.1.0"
+edition = "2021"
+authors = ["oscar-bio-dev"]
+repository = "https://github.com/oscar-bio-dev/oscar-bio-dev"
+keywords = ["iot", "telemetry", "rust"]
+categories = ["science", "embedded"]
+description = "Industrial grade telemetry hub for environmental monitoring"
+license-file = "LICENSE.txt"
+
+[dependencies]
+# El servidor web (router)
+axum = "0.7"
+# El runtime asíncrono
+tokio = { version = "1.36", features = ["full"] }
+# Motor de plantillas (compila HTML al binario)
+askama = "0.12"
+# Para servir archivos estáticos (CSS, imágenes)
+tower-http = { version = "0.5", features = ["fs"] }
+chrono = { version = "0.4.45", features = ["serde"] }
+serde = { version = "1.0.229", features = ["derive"] }
+thiserror = "2.0.20"
+serde_json = "1.0.151"

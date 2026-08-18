@@ -1,0 +1,58 @@
+/* Paleta Gruvbox Hard Dark */
+:root {
+    --bg: #1d2021;
+    --fg: #ebdbb2;
+    --green: #b8bb26;
+    --yellow: #fabd2f;
+    --blue: #83a598;
+    --gray: #928374;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: 'Fira Code', 'Courier New', Courier, monospace;
+    line-height: 1.6;
+    margin: 0;
+    padding: 3rem;
+    max-width: 800px;
+    margin: auto;
+}
+
+h1, h2 {
+    color: var(--green);
+    font-weight: normal;
+}
+
+.subtitle {
+    color: var(--yellow);
+    font-weight: bold;
+}
+
+a {
+    color: var(--blue);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+    background-color: rgba(131, 165, 152, 0.2);
+}
+
+ul {
+    list-style-type: none;
+    padding-left: 1.5rem;
+    border-left: 2px solid var(--gray);
+}
+
+li {
+    margin-bottom: 0.8rem;
+}
+
+footer {
+    margin-top: 4rem;
+    border-top: 1px dashed var(--gray);
+    padding-top: 1rem;
+    color: var(--gray);
+    font-size: 0.85em;
+}
