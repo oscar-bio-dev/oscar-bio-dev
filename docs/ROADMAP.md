@@ -35,11 +35,11 @@ To ensure relentless quality and comply with industrial standards, the platform'
 - [x] **Rigorous Testing (Mocking & Fuzzing):** Use of `proptest` (Property-Based Testing) against endpoints and `mockall` to mock and test behavior without physical hardware connected.
 
 ### 🔵 Phase 4: Persistence and Time-Series Flow
-- [ ] **Database Layer:** Asynchronous `sqlx` with compile-time query verification.
-- [ ] **Geospatial/Temporal Storage:** Preparation for PostgreSQL with **PostGIS** and **TimescaleDB** extensions (ideal for environmental time-series modeling and retention).
-- [ ] **Infrastructure as Code (IaC):** Deterministic spin-up and orchestration of the database using `docker-compose` (local) and Terraform/Nix (for production deployments).
+- [x] **Database Layer:** Asynchronous `sqlx` with compile-time query verification.
+- [x] **Geospatial/Temporal Storage:** Preparation for PostgreSQL with **PostGIS** and **TimescaleDB** extensions (ideal for environmental time-series modeling and retention).
+- [x] **Infrastructure as Code (IaC):** Deterministic spin-up and orchestration of the database using `docker-compose` (local) and Terraform/Nix (for production deployments).
 - [ ] **Fault Tolerance and Retention:** Implementation of a data retention buffer (message queues like Tokio async channels or Redis) to avoid losing critical burst data during database saturation or crashes.
-- [ ] **Robust IoT Ingestion:** Ultra-fast deserialization (`serde`) and strict payload validation (`validator`) before touching the database.
+- [x] **Robust IoT Ingestion:** Ultra-fast deserialization (`serde`) and strict payload validation (`validator`) before touching the database.
 - [ ] **Bidirectional Protocols:** Implementation of WebSockets or an HTTP-to-MQTT bridge for remote control and *Over-The-Air* (OTA) configuration of biosensors.
 
 ### 🟣 Phase 5: Edge & Cloud AI Synergy (Cognitive Digital Twin)

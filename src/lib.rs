@@ -30,3 +30,5 @@
 pub mod api;
 /// Módulo de lógica de negocio y tipos de datos fuertes (Clean Architecture).
 pub mod domain;
+/// Módulo de infraestructura y persistencia de datos.
+pub mod infrastructure;

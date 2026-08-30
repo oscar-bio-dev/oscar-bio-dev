@@ -54,13 +54,19 @@ use utoipa_swagger_ui::SwaggerUi;
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(oscar_bio_dev::api::telemetry::ingest_telemetry),
+    paths(
+        oscar_bio_dev::api::telemetry::ingest_telemetry,
+        oscar_bio_dev::api::telemetry::ingest_telemetry_protobuf
+    ),
     components(schemas(
         oscar_bio_dev::domain::telemetry::TelemetryPayload,
         oscar_bio_dev::domain::telemetry::Temperature,
         oscar_bio_dev::domain::telemetry::Humidity,
         oscar_bio_dev::domain::telemetry::Ph,
-        oscar_bio_dev::domain::telemetry::DissolvedOxygen
+        oscar_bio_dev::domain::telemetry::DissolvedOxygen,
+        oscar_bio_dev::domain::telemetry::Pressure,
+        oscar_bio_dev::domain::telemetry::GasResistance,
+        oscar_bio_dev::domain::telemetry::Co2
     )),
     tags((name = "telemetry", description = "Endpoints para sensores ambientales"))
 )]
@@ -74,15 +80,27 @@ use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 
 use axum::{error_handling::HandleErrorLayer, BoxError};
 
+use oscar_bio_dev::infrastructure::db::init_db_pool;
+
 #[tokio::main]
 async fn main() {
+    // Cargar variables de entorno
+    let _ = dotenvy::dotenv();
+
     // Inicializamos el suscriptor de tracing con EnvFilter
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
 
+    // Inicializar Pool de Base de Datos
+    let db_pool = init_db_pool().await.expect("Fallo al conectar a TimescaleDB");
+
+    // Ejecutar migraciones automáticamente
+    tracing::info!("Verificando migraciones SQL...");
+    sqlx::migrate!("./migrations").run(&db_pool).await.expect("Fallo al migrar la DB");
+
     // Estado concurrente
-    let app_state = AppState::new();
+    let app_state = AppState::new(db_pool);
 
     // Configuración de Rate Limiting
     let governor_conf =
@@ -96,6 +114,10 @@ async fn main() {
         .route(
             "/api/telemetry",
             axum::routing::post(oscar_bio_dev::api::telemetry::ingest_telemetry),
+        )
+        .route(
+            "/api/telemetry/protobuf",
+            axum::routing::post(oscar_bio_dev::api::telemetry::ingest_telemetry_protobuf),
         )
         .nest_service("/assets", ServeDir::new("assets"))
         .layer(

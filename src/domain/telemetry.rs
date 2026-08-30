@@ -22,6 +22,15 @@ pub enum TelemetryError {
     /// Error en la validación de Humedad Relativa.
     #[error("Humidity value {0} is out of valid range (0.0 - 100.0 %RH)")]
     Humidity(f64),
+    /// Error en la validación de Presión.
+    #[error("Pressure value {0} is out of valid range (300.0 - 1100.0 hPa)")]
+    Pressure(f64),
+    /// Error en la validación de Resistencia de Gas.
+    #[error("Gas Resistance value {0} is out of valid range")]
+    GasResistance(f64),
+    /// Error en la validación de CO2.
+    #[error("CO2 value {0} is out of valid range (400.0 - 40000.0 ppm)")]
+    Co2(f64),
 }
 
 /// Representa el pH del agua o suelo. Garantizado estar entre 0.0 y 14.0.
@@ -160,14 +169,123 @@ impl Humidity {
     }
 }
 
+/// Presión Atmosférica en hPa.
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(try_from = "f64")]
+pub struct Pressure(f64);
+
+impl TryFrom<f64> for Pressure {
+    type Error = TelemetryError;
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        Self::new(value)
+    }
+}
+
+impl Pressure {
+    /// Valor mínimo físico de Presión.
+    pub const MIN: f64 = 300.0;
+    /// Valor máximo físico de Presión.
+    pub const MAX: f64 = 1100.0;
+
+    /// Crea un nuevo valor validado de Presión.
+    pub fn new(value: f64) -> Result<Self, TelemetryError> {
+        if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
+            Err(TelemetryError::Pressure(value))
+        } else {
+            Ok(Self(value))
+        }
+    }
+
+    /// Obtiene el valor flotante crudo validado.
+    #[must_use]
+    pub const fn value(self) -> f64 {
+        self.0
+    }
+}
+
+/// Resistencia del gas (VOCs) en Ohmios (BME688).
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(try_from = "f64")]
+pub struct GasResistance(f64);
+
+impl TryFrom<f64> for GasResistance {
+    type Error = TelemetryError;
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        Self::new(value)
+    }
+}
+
+impl GasResistance {
+    /// Valor mínimo físico de Resistencia.
+    pub const MIN: f64 = 0.0;
+    /// Valor máximo físico de Resistencia.
+    pub const MAX: f64 = 50_000_000.0; // Hasta 50M Ohms
+
+    /// Crea un nuevo valor validado de Resistencia.
+    pub fn new(value: f64) -> Result<Self, TelemetryError> {
+        if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
+            Err(TelemetryError::GasResistance(value))
+        } else {
+            Ok(Self(value))
+        }
+    }
+
+    /// Obtiene el valor flotante crudo validado.
+    #[must_use]
+    pub const fn value(self) -> f64 {
+        self.0
+    }
+}
+
+/// Nivel de CO2 en ppm (SCD41).
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(try_from = "f64")]
+pub struct Co2(f64);
+
+impl TryFrom<f64> for Co2 {
+    type Error = TelemetryError;
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        Self::new(value)
+    }
+}
+
+impl Co2 {
+    /// Valor mínimo físico de CO2.
+    pub const MIN: f64 = 400.0;
+    /// Valor máximo físico de CO2.
+    pub const MAX: f64 = 40_000.0;
+
+    /// Crea un nuevo valor validado de CO2.
+    pub fn new(value: f64) -> Result<Self, TelemetryError> {
+        if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
+            Err(TelemetryError::Co2(value))
+        } else {
+            Ok(Self(value))
+        }
+    }
+
+    /// Obtiene el valor flotante crudo validado.
+    #[must_use]
+    pub const fn value(self) -> f64 {
+        self.0
+    }
+}
+
 /// Payload completo de telemetría proveniente del hardware edge (ESP32, RP2350).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(
+    Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema, validator::Validate,
+)]
 pub struct TelemetryPayload {
-    /// Identificador único del dispositivo.
+    /// ID único del dispositivo `IoT`
+    #[schema(example = "esp32-node-1")]
+    #[validate(length(min = 1, message = "El device_id no puede estar vacío"))]
     pub device_id: String,
-    /// Timestamp de lectura en formato ISO 8601 UTC.
+
+    /// Timestamp de la lectura (UTC)
+    #[schema(example = "2026-08-30T10:00:00Z")]
     pub timestamp: DateTime<Utc>,
-    /// Temperatura en grados Celsius.
+
+    /// Temperatura validada en grados Celsius
     pub temperature: Temperature,
     /// Humedad Relativa (%).
     pub humidity: Option<Humidity>,
@@ -175,6 +293,66 @@ pub struct TelemetryPayload {
     pub ph: Option<Ph>,
     /// Oxígeno Disuelto (mg/L).
     pub dissolved_oxygen: Option<DissolvedOxygen>,
+
+    /// Presión Atmosférica (hPa).
+    pub pressure: Option<Pressure>,
+    /// Resistencia de Gas VOCs (Ohms).
+    pub gas_resistance: Option<GasResistance>,
+    /// CO2 (ppm).
+    pub co2: Option<Co2>,
+}
+
+/// DTO binario para Protobuf
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct TelemetryPayloadPb {
+    /// ID del dispositivo
+    #[prost(string, tag = "1")]
+    pub device_id: String,
+    /// Timestamp Unix en milisegundos
+    #[prost(int64, tag = "2")]
+    pub timestamp_epoch_ms: i64,
+    /// Temperatura en C
+    #[prost(double, tag = "3")]
+    pub temperature: f64,
+    /// Humedad Relativa
+    #[prost(double, optional, tag = "4")]
+    pub humidity: Option<f64>,
+    /// pH
+    #[prost(double, optional, tag = "5")]
+    pub ph: Option<f64>,
+    /// Oxígeno Disuelto
+    #[prost(double, optional, tag = "6")]
+    pub dissolved_oxygen: Option<f64>,
+    /// Presión en hPa
+    #[prost(double, optional, tag = "7")]
+    pub pressure: Option<f64>,
+    /// Resistencia Gas Ohms
+    #[prost(double, optional, tag = "8")]
+    pub gas_resistance: Option<f64>,
+    /// CO2 ppm
+    #[prost(double, optional, tag = "9")]
+    pub co2: Option<f64>,
+}
+
+impl TryFrom<TelemetryPayloadPb> for TelemetryPayload {
+    type Error = TelemetryError;
+
+    fn try_from(pb: TelemetryPayloadPb) -> Result<Self, Self::Error> {
+        let timestamp =
+            chrono::DateTime::from_timestamp_millis(pb.timestamp_epoch_ms).unwrap_or_default();
+
+        Ok(Self {
+            device_id: pb.device_id,
+            timestamp,
+            temperature: Temperature::new(pb.temperature)?,
+            humidity: pb.humidity.map(Humidity::new).transpose()?,
+            ph: pb.ph.map(Ph::new).transpose()?,
+            dissolved_oxygen: pb.dissolved_oxygen.map(DissolvedOxygen::new).transpose()?,
+            pressure: pb.pressure.map(Pressure::new).transpose()?,
+            gas_resistance: pb.gas_resistance.map(GasResistance::new).transpose()?,
+            co2: pb.co2.map(Co2::new).transpose()?,
+        })
+    }
 }
 
 #[cfg(test)]

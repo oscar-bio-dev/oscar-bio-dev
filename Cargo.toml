@@ -1,6 +1,6 @@
 [package]
 name = "oscar-bio-dev"
-version = "0.3.0"
+version = "0.4.5"
 edition = "2021"
 authors = ["oscar-bio-dev"]
 repository = "https://github.com/oscar-bio-dev/oscar-bio-dev"
@@ -28,6 +28,11 @@ utoipa = { version = "4", features = ["axum_extras", "chrono"] }
 utoipa-swagger-ui = { version = "7", features = ["axum"] }
 tower = { version = "0.5", features = ["timeout", "limit"] }
 tower_governor = "0.4.2"
+sqlx = { version = "0.7", features = ["runtime-tokio", "tls-rustls", "postgres", "chrono", "uuid"] }
+validator = { version = "0.18", features = ["derive"] }
+dotenvy = "0.15"
+prost = "0.13"
+bytes = "1.5"
 
 [dev-dependencies]
 proptest = "1.4"
