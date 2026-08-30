@@ -4,5 +4,9 @@
 // Unauthorized copying of this file, via any medium, is strictly prohibited.
 // Proprietary and confidential.
 
+/// Submódulo encargado del Chatbot LLM impulsado por Gemini.
+pub mod chat;
+/// Submódulo encargado de la lectura global del gemelo digital.
+pub mod digital_twin;
 /// Submódulo encargado de la recepción y validación HTTP de la telemetría.
 pub mod telemetry;

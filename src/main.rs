@@ -56,7 +56,9 @@ use utoipa_swagger_ui::SwaggerUi;
 #[openapi(
     paths(
         oscar_bio_dev::api::telemetry::ingest_telemetry,
-        oscar_bio_dev::api::telemetry::ingest_telemetry_protobuf
+        oscar_bio_dev::api::telemetry::ingest_telemetry_protobuf,
+        oscar_bio_dev::api::digital_twin::get_digital_twin,
+        oscar_bio_dev::api::chat::chat_with_twin
     ),
     components(schemas(
         oscar_bio_dev::domain::telemetry::TelemetryPayload,
@@ -66,11 +68,34 @@ use utoipa_swagger_ui::SwaggerUi;
         oscar_bio_dev::domain::telemetry::DissolvedOxygen,
         oscar_bio_dev::domain::telemetry::Pressure,
         oscar_bio_dev::domain::telemetry::GasResistance,
-        oscar_bio_dev::domain::telemetry::Co2
+        oscar_bio_dev::domain::telemetry::Co2,
+        oscar_bio_dev::api::chat::ChatRequest,
+        oscar_bio_dev::api::chat::ChatResponse
     )),
-    tags((name = "telemetry", description = "Endpoints para sensores ambientales"))
+    tags((name = "telemetry", description = "Endpoints para sensores ambientales")),
+    modifiers(&SecurityAddon)
 )]
 struct ApiDoc;
+
+use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
+use utoipa::Modify;
+
+struct SecurityAddon;
+impl Modify for SecurityAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        if let Some(components) = openapi.components.as_mut() {
+            components.add_security_scheme(
+                "bearerAuth",
+                SecurityScheme::Http(
+                    HttpBuilder::new()
+                        .scheme(HttpAuthScheme::Bearer)
+                        .bearer_format("Token")
+                        .build(),
+                ),
+            );
+        }
+    }
+}
 
 use oscar_bio_dev::domain::state::AppState;
 use std::sync::Arc;
@@ -119,6 +144,11 @@ async fn main() {
             "/api/telemetry/protobuf",
             axum::routing::post(oscar_bio_dev::api::telemetry::ingest_telemetry_protobuf),
         )
+        .route(
+            "/api/digital-twin",
+            axum::routing::get(oscar_bio_dev::api::digital_twin::get_digital_twin),
+        )
+        .route("/api/chat", axum::routing::post(oscar_bio_dev::api::chat::chat_with_twin))
         .nest_service("/assets", ServeDir::new("assets"))
         .layer(
             tower::ServiceBuilder::new()

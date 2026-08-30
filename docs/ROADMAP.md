@@ -44,10 +44,10 @@ To ensure relentless quality and comply with industrial standards, the platform'
 
 ### 🟣 Phase 5: Edge & Cloud AI Synergy (Cognitive Digital Twin)
 - [ ] **Edge Inference Engine (TinyML):** Integration of Machine Learning models (exported via Edge Impulse) directly into Rust/C++ firmware using `tract` or `ort`.
-- [ ] **Real-Time Edge Classification:** Microcontroller-level (RP2350, ESP32) analysis of water/soil quality data for ultra-low latency anomaly detection and alerts.
+- [ ] **Real-Time Edge Classification:** Microcontroller-level (ESP32, STM32, Microchip Technology, Texas Instruments) analysis of water/soil quality data for ultra-low latency anomaly detection and alerts.
 - [ ] **Digital Twin Architecture:** In-memory virtual representation of the current state of all deployed hardware nodes.
 - [ ] **Generative AI Hub Interface:** Integration of the Gemini LLM via serverless backend (Firebase Cloud Functions) to act as a conversational expert system, dynamically analyzing real-time telemetry and Digital Twin states to provide natural language insights.
-- [ ] **Terminal Chatbot UI:** A minimalist, Gruvbox-styled terminal web component, acting as the frontend interface to query the Cognitive Digital Twin.
+- [x] **Agent Terminal UI:** A minimalist terminal web component, acting as the frontend interface to query the Cognitive Digital Twin.
 
 ### ⚫ Phase 6: Space Grade (Orbital & Wasm)
 - [ ] **Reactive Wasm Frontend:** Interactive graphical interface (dashboard) compiled to **WebAssembly** (e.g., Leptos or Dioxus), eliminating external JS frameworks.

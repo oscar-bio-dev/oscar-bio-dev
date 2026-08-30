@@ -194,3 +194,54 @@ footer {
         text-align: center;
     }
 }
+
+/* AI Chatbot Terminal */
+.chat-history {
+    min-height: 150px;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.chat-line {
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+.system-line { color: var(--fg-muted); }
+.user-line { color: var(--accent-green); }
+.ai-line { color: var(--accent-yellow); }
+
+.chat-input-wrapper {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    border-top: 1px dashed var(--border-color);
+    padding-top: 1rem;
+}
+.chat-input-wrapper input {
+    background: transparent;
+    border: none;
+    color: var(--fg-main);
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    flex-grow: 1;
+    outline: none;
+}
+.chat-input-wrapper input::placeholder {
+    color: var(--fg-muted);
+}
+.typing-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 1em;
+    background-color: var(--accent-yellow);
+    animation: blink 1s step-end infinite;
+    vertical-align: text-bottom;
+    margin-left: 2px;
+}
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
