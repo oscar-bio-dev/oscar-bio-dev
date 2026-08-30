@@ -1,6 +1,6 @@
 [package]
 name = "oscar-bio-dev"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["oscar-bio-dev"]
 repository = "https://github.com/oscar-bio-dev/oscar-bio-dev"
@@ -26,3 +26,8 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 utoipa = { version = "4", features = ["axum_extras", "chrono"] }
 utoipa-swagger-ui = { version = "7", features = ["axum"] }
+tower = { version = "0.5", features = ["timeout", "limit"] }
+tower_governor = "0.4.2"
+
+[dev-dependencies]
+proptest = "1.4"

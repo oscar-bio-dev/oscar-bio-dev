@@ -66,10 +66,28 @@ use utoipa_swagger_ui::SwaggerUi;
 )]
 struct ApiDoc;
 
+use oscar_bio_dev::domain::state::AppState;
+use std::sync::Arc;
+use std::time::Duration;
+use tower::timeout::TimeoutLayer;
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
+
+use axum::{error_handling::HandleErrorLayer, BoxError};
+
 #[tokio::main]
 async fn main() {
-    // Inicializamos el suscriptor de tracing
-    tracing_subscriber::fmt::init();
+    // Inicializamos el suscriptor de tracing con EnvFilter
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
+
+    // Estado concurrente
+    let app_state = AppState::new();
+
+    // Configuración de Rate Limiting
+    let governor_conf =
+        Arc::new(GovernorConfigBuilder::default().per_second(5).burst_size(10).finish().unwrap());
+    let governor_layer = GovernorLayer { config: governor_conf };
 
     // Definimos las rutas y la carpeta de archivos estáticos (assets)
     let app = Router::new()
@@ -79,10 +97,47 @@ async fn main() {
             "/api/telemetry",
             axum::routing::post(oscar_bio_dev::api::telemetry::ingest_telemetry),
         )
-        .nest_service("/assets", ServeDir::new("assets"));
+        .nest_service("/assets", ServeDir::new("assets"))
+        .layer(
+            tower::ServiceBuilder::new()
+                .layer(HandleErrorLayer::new(|err: BoxError| async move {
+                    (
+                        axum::http::StatusCode::REQUEST_TIMEOUT,
+                        format!("Request dropped by protection layer: {err}"),
+                    )
+                }))
+                .layer(TimeoutLayer::new(Duration::from_secs(5)))
+                .layer(governor_layer),
+        )
+        .with_state(app_state);
 
     // Arrancamos el servidor en el puerto 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::info!("Servidor Rust 'bare-metal' corriendo en http://localhost:3000");
-    axum::serve(listener, app).await.unwrap();
+
+    axum::serve(listener, app).with_graceful_shutdown(shutdown_signal()).await.unwrap();
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c().await.expect("Failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("Failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        () = ctrl_c => {},
+        () = terminate => {},
+    }
+
+    tracing::info!("Señal de apagado recibida, iniciando Graceful Shutdown...");
 }

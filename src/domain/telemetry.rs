@@ -246,4 +246,27 @@ mod tests {
         let payload: Result<TelemetryPayload, _> = serde_json::from_str(json_data);
         assert!(payload.is_err(), "El JSON con pH 15.0 debería ser rechazado por serde");
     }
+
+    use proptest::prelude::*;
+    proptest! {
+        #[test]
+        fn fuzz_temperature_creation(val in proptest::num::f64::ANY) {
+            let _ = Temperature::new(val);
+        }
+
+        #[test]
+        fn fuzz_humidity_creation(val in proptest::num::f64::ANY) {
+            let _ = Humidity::new(val);
+        }
+
+        #[test]
+        fn fuzz_ph_creation(val in proptest::num::f64::ANY) {
+            let _ = Ph::new(val);
+        }
+
+        #[test]
+        fn fuzz_do_creation(val in proptest::num::f64::ANY) {
+            let _ = DissolvedOxygen::new(val);
+        }
+    }
 }

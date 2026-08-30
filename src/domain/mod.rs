@@ -4,5 +4,7 @@
 // Unauthorized copying of this file, via any medium, is strictly prohibited.
 // Proprietary and confidential.
 
+/// Estado global concurrente (Gemelo Digital).
+pub mod state;
 /// Definiciones de tipos físicos y reglas de negocio para sensores ambientales.
 pub mod telemetry;

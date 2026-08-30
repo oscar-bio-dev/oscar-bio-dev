@@ -22,17 +22,17 @@ To ensure relentless quality and comply with industrial standards, the platform'
 
 ### 🟡 Phase 2: Static Structure and API Contracts
 - [x] **Architectural Modularization:** Clean Architecture pattern, dividing endpoints into logical domains (e.g., `/api/telemetry`, `/portfolio`).
-- [ ] **SSR Template Engine:** Hierarchy of layouts compiled directly into the binary using `askama` (zero parsing at runtime).
+- [x] **SSR Template Engine:** Hierarchy of layouts compiled directly into the binary using `askama` (zero parsing at runtime).
 - [x] **Typed Error Handling:** Use of `thiserror` for the domain and `anyhow` for the application, with automatic mapping to HTTP status codes.
-- [ ] **API Contracts (OpenAPI):** Automatic generation of Swagger/OpenAPI specifications using `utoipa` to document sensor ingestion.
-- [ ] **Internal Documentation (rustdoc):** Strict use of doc-comments (`///`) on public structs and functions to generate live technical manuals automatically with `cargo doc`.
+- [x] **API Contracts (OpenAPI):** Automatic generation of Swagger/OpenAPI specifications using `utoipa` to document sensor ingestion.
+- [x] **Internal Documentation (rustdoc):** Strict use of doc-comments (`///`) on public structs and functions to generate live technical manuals automatically with `cargo doc`.
 
 ### 🟠 Phase 3: Telemetry, State, and Resilience
-- [ ] **Industrial Observability:** Structured and asynchronous logging via `tracing`, aiming to export to **OpenTelemetry (OTel)** (Prometheus/Grafana).
-- [ ] **Concurrent Shared State:** Safe dependency injection (`State`, `Arc`, `RwLock`) in Axum to handle the global state of the sensor fleet.
-- [ ] **Graceful Shutdown:** Interception of system signals (SIGINT/SIGTERM) for a safe shutdown without losing telemetry data in flight.
-- [ ] **Traffic Protection:** `tower` middlewares for *Rate Limiting* and *Timeout*, preventing saturation from burst data sent by faulty hardware.
-- [ ] **Rigorous Testing (Mocking & Fuzzing):** Use of `proptest` (Property-Based Testing) against endpoints and `mockall` to mock and test behavior without physical hardware connected.
+- [x] **Industrial Observability:** Structured and asynchronous logging via `tracing`, aiming to export to **OpenTelemetry (OTel)** (Prometheus/Grafana).
+- [x] **Concurrent Shared State:** Safe dependency injection (`State`, `Arc`, `RwLock`) in Axum to handle the global state of the sensor fleet.
+- [x] **Graceful Shutdown:** Interception of system signals (SIGINT/SIGTERM) for a safe shutdown without losing telemetry data in flight.
+- [x] **Traffic Protection:** `tower` middlewares for *Rate Limiting* and *Timeout*, preventing saturation from burst data sent by faulty hardware.
+- [x] **Rigorous Testing (Mocking & Fuzzing):** Use of `proptest` (Property-Based Testing) against endpoints and `mockall` to mock and test behavior without physical hardware connected.
 
 ### 🔵 Phase 4: Persistence and Time-Series Flow
 - [ ] **Database Layer:** Asynchronous `sqlx` with compile-time query verification.
