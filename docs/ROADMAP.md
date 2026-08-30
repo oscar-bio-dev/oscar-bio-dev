@@ -21,9 +21,9 @@ To ensure relentless quality and comply with industrial standards, the platform'
 - [x] **Basic Testing:** Integration of `cargo test` as a mandatory requirement in the CI/CD pipeline for continuous validation of the core logic.
 
 ### 🟡 Phase 2: Static Structure and API Contracts
-- [ ] **Architectural Modularization:** Clean Architecture pattern, dividing endpoints into logical domains (e.g., `/api/telemetry`, `/portfolio`).
+- [x] **Architectural Modularization:** Clean Architecture pattern, dividing endpoints into logical domains (e.g., `/api/telemetry`, `/portfolio`).
 - [ ] **SSR Template Engine:** Hierarchy of layouts compiled directly into the binary using `askama` (zero parsing at runtime).
-- [ ] **Typed Error Handling:** Use of `thiserror` for the domain and `anyhow` for the application, with automatic mapping to HTTP status codes.
+- [x] **Typed Error Handling:** Use of `thiserror` for the domain and `anyhow` for the application, with automatic mapping to HTTP status codes.
 - [ ] **API Contracts (OpenAPI):** Automatic generation of Swagger/OpenAPI specifications using `utoipa` to document sensor ingestion.
 - [ ] **Internal Documentation (rustdoc):** Strict use of doc-comments (`///`) on public structs and functions to generate live technical manuals automatically with `cargo doc`.
 

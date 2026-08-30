@@ -22,3 +22,5 @@ chrono = { version = "0.4.45", features = ["serde"] }
 serde = { version = "1.0.229", features = ["derive"] }
 thiserror = "2.0.20"
 serde_json = "1.0.151"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

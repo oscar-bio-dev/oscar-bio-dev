@@ -8,12 +8,13 @@ use crate::domain::telemetry::TelemetryPayload;
 use axum::{http::StatusCode, response::IntoResponse, Json};
 
 /// Endpoint para la ingesta de datos provenientes de los sensores de campo.
+#[allow(clippy::unused_async)]
 pub async fn ingest_telemetry(Json(payload): Json<TelemetryPayload>) -> impl IntoResponse {
     // Gracias al tipado fuerte y #[serde(try_from)], sabemos que `payload` es 100% válido aquí.
     // No necesitamos escribir validaciones manuales repetitivas en el controlador.
 
     // TODO: En la Fase 4 esto se insertará en TimescaleDB vía sqlx.
-    println!(
+    tracing::info!(
         "Recibida telemetría válida desde {}: Temp = {}°C",
         payload.device_id,
         payload.temperature.value()

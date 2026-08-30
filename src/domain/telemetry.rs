@@ -26,9 +26,9 @@ pub enum TelemetryError {
 pub struct Ph(f64);
 
 impl TryFrom<f64> for Ph {
-    type Error = String;
+    type Error = TelemetryError;
     fn try_from(value: f64) -> Result<Self, Self::Error> {
-        Self::new(value).map_err(|e| e.to_string())
+        Self::new(value)
     }
 }
 
@@ -57,9 +57,9 @@ impl Ph {
 pub struct DissolvedOxygen(f64);
 
 impl TryFrom<f64> for DissolvedOxygen {
-    type Error = String;
+    type Error = TelemetryError;
     fn try_from(value: f64) -> Result<Self, Self::Error> {
-        Self::new(value).map_err(|e| e.to_string())
+        Self::new(value)
     }
 }
 
@@ -87,9 +87,9 @@ impl DissolvedOxygen {
 pub struct Temperature(f64);
 
 impl TryFrom<f64> for Temperature {
-    type Error = String;
+    type Error = TelemetryError;
     fn try_from(value: f64) -> Result<Self, Self::Error> {
-        Self::new(value).map_err(|e| e.to_string())
+        Self::new(value)
     }
 }
 
@@ -117,9 +117,9 @@ impl Temperature {
 pub struct Humidity(f64);
 
 impl TryFrom<f64> for Humidity {
-    type Error = String;
+    type Error = TelemetryError;
     fn try_from(value: f64) -> Result<Self, Self::Error> {
-        Self::new(value).map_err(|e| e.to_string())
+        Self::new(value)
     }
 }
 

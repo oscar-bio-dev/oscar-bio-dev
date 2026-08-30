@@ -20,8 +20,7 @@
     clippy::multiple_crate_versions
 )]
 
-pub mod api;
-pub mod domain;
+// Modules are now imported from the oscar_bio_dev library crate.
 
 use askama::Template;
 use axum::response::{Html, IntoResponse};
@@ -51,14 +50,20 @@ async fn index() -> impl IntoResponse {
 
 #[tokio::main]
 async fn main() {
+    // Inicializamos el suscriptor de tracing
+    tracing_subscriber::fmt::init();
+
     // Definimos las rutas y la carpeta de archivos estáticos (assets)
     let app = Router::new()
         .route("/", get(index))
-        .route("/api/telemetry", axum::routing::post(api::telemetry::ingest_telemetry))
+        .route(
+            "/api/telemetry",
+            axum::routing::post(oscar_bio_dev::api::telemetry::ingest_telemetry),
+        )
         .nest_service("/assets", ServeDir::new("assets"));
 
     // Arrancamos el servidor en el puerto 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    println!("Servidor Rust 'bare-metal' corriendo en http://localhost:3000");
+    tracing::info!("Servidor Rust 'bare-metal' corriendo en http://localhost:3000");
     axum::serve(listener, app).await.unwrap();
 }
