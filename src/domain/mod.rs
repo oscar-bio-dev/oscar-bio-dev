@@ -4,4 +4,5 @@
 // Unauthorized copying of this file, via any medium, is strictly prohibited.
 // Proprietary and confidential.
 
+/// Definiciones de tipos físicos y reglas de negocio para sensores ambientales.
 pub mod telemetry;

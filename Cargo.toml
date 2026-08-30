@@ -1,6 +1,6 @@
 [package]
 name = "oscar-bio-dev"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["oscar-bio-dev"]
 repository = "https://github.com/oscar-bio-dev/oscar-bio-dev"
@@ -24,3 +24,5 @@ thiserror = "2.0.20"
 serde_json = "1.0.151"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+utoipa = { version = "4", features = ["axum_extras", "chrono"] }
+utoipa-swagger-ui = { version = "7", features = ["axum"] }

@@ -8,6 +8,14 @@ use crate::domain::telemetry::TelemetryPayload;
 use axum::{http::StatusCode, response::IntoResponse, Json};
 
 /// Endpoint para la ingesta de datos provenientes de los sensores de campo.
+#[utoipa::path(
+    post,
+    path = "/api/telemetry",
+    request_body = TelemetryPayload,
+    responses(
+        (status = 201, description = "Telemetría recibida correctamente")
+    )
+)]
 #[allow(clippy::unused_async)]
 pub async fn ingest_telemetry(Json(payload): Json<TelemetryPayload>) -> impl IntoResponse {
     // Gracias al tipado fuerte y #[serde(try_from)], sabemos que `payload` es 100% válido aquí.

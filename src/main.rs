@@ -8,6 +8,7 @@
     nonstandard_style,
     unused
 )]
+#![allow(clippy::needless_for_each)]
 // Copyright (c) 2026 Oscar Mora / SetaeSense. All rights reserved.
 //
 // This file is part of the oscar-bio-dev platform.
@@ -48,6 +49,23 @@ async fn index() -> impl IntoResponse {
     )
 }
 
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(oscar_bio_dev::api::telemetry::ingest_telemetry),
+    components(schemas(
+        oscar_bio_dev::domain::telemetry::TelemetryPayload,
+        oscar_bio_dev::domain::telemetry::Temperature,
+        oscar_bio_dev::domain::telemetry::Humidity,
+        oscar_bio_dev::domain::telemetry::Ph,
+        oscar_bio_dev::domain::telemetry::DissolvedOxygen
+    )),
+    tags((name = "telemetry", description = "Endpoints para sensores ambientales"))
+)]
+struct ApiDoc;
+
 #[tokio::main]
 async fn main() {
     // Inicializamos el suscriptor de tracing
@@ -55,6 +73,7 @@ async fn main() {
 
     // Definimos las rutas y la carpeta de archivos estáticos (assets)
     let app = Router::new()
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .route("/", get(index))
         .route(
             "/api/telemetry",

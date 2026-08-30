@@ -6,7 +6,8 @@
     rust_2018_idioms,
     future_incompatible,
     nonstandard_style,
-    unused
+    unused,
+    missing_docs
 )]
 // Copyright (c) 2026 Oscar Mora / SetaeSense. All rights reserved.
 //
@@ -20,5 +21,12 @@
     clippy::multiple_crate_versions
 )]
 
+//! `oscar_bio_dev` es el núcleo de telemetría y portafolio interactivo.
+//!
+//! Esta biblioteca provee los endpoints y modelos de dominio necesarios
+//! para la ingesta de datos ambientales provenientes de hardware `IoT`.
+
+/// Módulo de controladores (handlers) y rutas HTTP de la API.
 pub mod api;
+/// Módulo de lógica de negocio y tipos de datos fuertes (Clean Architecture).
 pub mod domain;

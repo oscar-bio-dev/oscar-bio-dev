@@ -4,4 +4,5 @@
 // Unauthorized copying of this file, via any medium, is strictly prohibited.
 // Proprietary and confidential.
 
+/// Submódulo encargado de la recepción y validación HTTP de la telemetría.
 pub mod telemetry;

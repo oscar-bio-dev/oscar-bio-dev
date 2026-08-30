@@ -10,18 +10,22 @@ use serde::{Deserialize, Serialize};
 /// Error devuelto al intentar crear un valor de telemetría con estado inválido.
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum TelemetryError {
+    /// Error en la validación del pH.
     #[error("pH value {0} is out of valid range (0.0 - 14.0)")]
     Ph(f64),
+    /// Error en la validación del Oxígeno Disuelto.
     #[error("Dissolved oxygen value {0} is out of valid range (0.0 - 40.0 mg/L)")]
     DissolvedOxygen(f64),
+    /// Error en la validación de Temperatura.
     #[error("Temperature value {0} is out of valid range (-50.0 - 150.0 °C)")]
     Temperature(f64),
+    /// Error en la validación de Humedad Relativa.
     #[error("Humidity value {0} is out of valid range (0.0 - 100.0 %RH)")]
     Humidity(f64),
 }
 
 /// Representa el pH del agua o suelo. Garantizado estar entre 0.0 y 14.0.
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(try_from = "f64")]
 pub struct Ph(f64);
 
@@ -33,7 +37,9 @@ impl TryFrom<f64> for Ph {
 }
 
 impl Ph {
+    /// Valor mínimo físico de pH.
     pub const MIN: f64 = 0.0;
+    /// Valor máximo físico de pH.
     pub const MAX: f64 = 14.0;
 
     /// Crea un nuevo valor de pH. Retorna error si está fuera de rango físico.
@@ -45,6 +51,7 @@ impl Ph {
         }
     }
 
+    /// Obtiene el valor flotante crudo validado.
     #[must_use]
     pub const fn value(self) -> f64 {
         self.0
@@ -52,7 +59,7 @@ impl Ph {
 }
 
 /// Representa el Oxígeno Disuelto (mg/L).
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(try_from = "f64")]
 pub struct DissolvedOxygen(f64);
 
@@ -64,9 +71,12 @@ impl TryFrom<f64> for DissolvedOxygen {
 }
 
 impl DissolvedOxygen {
+    /// Valor mínimo físico de Oxígeno Disuelto.
     pub const MIN: f64 = 0.0;
+    /// Valor máximo de Oxígeno Disuelto (mg/L).
     pub const MAX: f64 = 40.0; // mg/L, valor máximo físico razonable.
 
+    /// Crea un nuevo valor validado.
     pub fn new(value: f64) -> Result<Self, TelemetryError> {
         if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
             Err(TelemetryError::DissolvedOxygen(value))
@@ -75,6 +85,7 @@ impl DissolvedOxygen {
         }
     }
 
+    /// Obtiene el valor flotante crudo validado.
     #[must_use]
     pub const fn value(self) -> f64 {
         self.0
@@ -82,7 +93,7 @@ impl DissolvedOxygen {
 }
 
 /// Temperatura en grados Celsius.
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(try_from = "f64")]
 pub struct Temperature(f64);
 
@@ -94,9 +105,12 @@ impl TryFrom<f64> for Temperature {
 }
 
 impl Temperature {
+    /// Valor mínimo físico de Temperatura.
     pub const MIN: f64 = -50.0;
+    /// Valor máximo físico de Temperatura (°C).
     pub const MAX: f64 = 150.0; // Suficiente para aplicaciones industriales ambientales.
 
+    /// Crea un nuevo valor validado de Temperatura.
     pub fn new(value: f64) -> Result<Self, TelemetryError> {
         if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
             Err(TelemetryError::Temperature(value))
@@ -105,6 +119,7 @@ impl Temperature {
         }
     }
 
+    /// Obtiene el valor flotante crudo validado.
     #[must_use]
     pub const fn value(self) -> f64 {
         self.0
@@ -112,7 +127,7 @@ impl Temperature {
 }
 
 /// Humedad Relativa (%).
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(try_from = "f64")]
 pub struct Humidity(f64);
 
@@ -124,9 +139,12 @@ impl TryFrom<f64> for Humidity {
 }
 
 impl Humidity {
+    /// Valor mínimo físico de Humedad.
     pub const MIN: f64 = 0.0;
+    /// Valor máximo físico de Humedad (%).
     pub const MAX: f64 = 100.0;
 
+    /// Crea un nuevo valor validado de Humedad.
     pub fn new(value: f64) -> Result<Self, TelemetryError> {
         if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
             Err(TelemetryError::Humidity(value))
@@ -135,6 +153,7 @@ impl Humidity {
         }
     }
 
+    /// Obtiene el valor flotante crudo validado.
     #[must_use]
     pub const fn value(self) -> f64 {
         self.0
@@ -142,13 +161,19 @@ impl Humidity {
 }
 
 /// Payload completo de telemetría proveniente del hardware edge (ESP32, RP2350).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct TelemetryPayload {
+    /// Identificador único del dispositivo.
     pub device_id: String,
+    /// Timestamp de lectura en formato ISO 8601 UTC.
     pub timestamp: DateTime<Utc>,
+    /// Temperatura en grados Celsius.
     pub temperature: Temperature,
+    /// Humedad Relativa (%).
     pub humidity: Option<Humidity>,
+    /// Nivel de pH (0.0 - 14.0).
     pub ph: Option<Ph>,
+    /// Oxígeno Disuelto (mg/L).
     pub dissolved_oxygen: Option<DissolvedOxygen>,
 }
 
