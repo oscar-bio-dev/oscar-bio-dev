@@ -124,8 +124,15 @@ async fn main() {
     tracing::info!("Verificando migraciones SQL...");
     sqlx::migrate!("./migrations").run(&db_pool).await.expect("Fallo al migrar la DB");
 
+    // Inicializar canales de buffer asíncrono y streaming WebSockets
+    let (tx_db, rx_db) = tokio::sync::mpsc::channel(10_000);
+    let (tx_ws, _rx_ws) = tokio::sync::broadcast::channel(100);
+
+    // Iniciar el worker de persistencia en background
+    oscar_bio_dev::infrastructure::worker::start_db_worker(db_pool.clone(), rx_db);
+
     // Estado concurrente
-    let app_state = AppState::new(db_pool);
+    let app_state = AppState::new(db_pool, tx_db, tx_ws);
 
     // Configuración de Rate Limiting
     let governor_conf =
@@ -149,6 +156,7 @@ async fn main() {
             axum::routing::get(oscar_bio_dev::api::digital_twin::get_digital_twin),
         )
         .route("/api/chat", axum::routing::post(oscar_bio_dev::api::chat::chat_with_twin))
+        .route("/api/ws", axum::routing::get(oscar_bio_dev::api::ws::ws_handler))
         .nest_service("/assets", ServeDir::new("assets"))
         .layer(
             tower::ServiceBuilder::new()

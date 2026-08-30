@@ -11,7 +11,7 @@ license-file = "LICENSE.txt"
 
 [dependencies]
 # El servidor web (router)
-axum = "0.7"
+axum = { version = "0.7", features = ["ws"] }
 # El runtime asíncrono
 tokio = { version = "1.36", features = ["full"] }
 # Motor de plantillas (compila HTML al binario)
@@ -34,6 +34,7 @@ dotenvy = "0.15"
 prost = "0.13"
 bytes = "1.5"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+futures-util = "0.3"
 
 [dev-dependencies]
 proptest = "1.4"

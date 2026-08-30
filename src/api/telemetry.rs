@@ -32,49 +32,34 @@ pub async fn ingest_telemetry(
         return Err((StatusCode::BAD_REQUEST, format!("Invalid payload: {e}")));
     }
 
-    // 2. Persistencia determinista vía sqlx
-    let query_result = sqlx::query(
-        r"
-        INSERT INTO telemetry (device_id, timestamp, temperature, humidity, ph, dissolved_oxygen, pressure, gas_resistance, co2)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        ",
-    )
-    .bind(&payload.device_id)
-    .bind(payload.timestamp)
-    .bind(payload.temperature.value())
-    .bind(payload.humidity.map(crate::domain::telemetry::Humidity::value))
-    .bind(payload.ph.map(crate::domain::telemetry::Ph::value))
-    .bind(payload.dissolved_oxygen.map(crate::domain::telemetry::DissolvedOxygen::value))
-    .bind(payload.pressure.map(crate::domain::telemetry::Pressure::value))
-    .bind(payload.gas_resistance.map(crate::domain::telemetry::GasResistance::value))
-    .bind(payload.co2.map(crate::domain::telemetry::Co2::value))
-    .execute(&state.db_pool)
-    .await;
-
-    match query_result {
-        Ok(_) => {
-            // 3. Actualizamos el Gemelo Digital en RAM
-            {
-                let mut twin = state.digital_twin.write().await;
-                twin.insert(payload.device_id.clone(), payload.clone());
-            }
-
-            tracing::info!(
-                "Recibida telemetría persistida desde {}: Temp = {}°C",
-                payload.device_id,
-                payload.temperature.value()
-            );
-
-            Ok((StatusCode::CREATED, "Telemetría persistida correctamente"))
-        }
-        Err(e) => {
-            tracing::error!("Error insertando en la base de datos: {}", e);
-            Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Error interno al procesar telemetría".to_string(),
-            ))
-        }
+    // 2. Actualizamos el Gemelo Digital en RAM
+    {
+        let mut twin = state.digital_twin.write().await;
+        twin.insert(payload.device_id.clone(), payload.clone());
     }
+
+    // 3. Persistencia Asíncrona (Buffer) y Streaming (WebSockets)
+    let _ = state.tx_ws.send(payload.clone()); // Ignoramos si no hay clientes conectados
+
+    if let Err(e) = state.tx_db.send(payload.clone()).await {
+        tracing::error!(
+            "Buffer de persistencia lleno o cerrado. Se perdió telemetría de {}: {}",
+            payload.device_id,
+            e
+        );
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Persistencia temporalmente inhabilitada (Buffer saturado)".to_string(),
+        ));
+    }
+
+    tracing::info!(
+        "Recibida telemetría HTTP desde {}: Temp = {}°C (Encolada)",
+        payload.device_id,
+        payload.temperature.value()
+    );
+
+    Ok((StatusCode::ACCEPTED, "Telemetría encolada correctamente"))
 }
 
 /// Endpoint para la ingesta de telemetría binaria de ultra-bajo peso (Protobuf).
@@ -117,46 +102,32 @@ pub async fn ingest_telemetry_protobuf(
         return Err((StatusCode::BAD_REQUEST, format!("Invalid payload rules: {e}")));
     }
 
-    // 3. Persistencia determinista vía sqlx
-    let query_result = sqlx::query(
-        r"
-        INSERT INTO telemetry (device_id, timestamp, temperature, humidity, ph, dissolved_oxygen, pressure, gas_resistance, co2)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        "
-    )
-    .bind(&payload.device_id)
-    .bind(payload.timestamp)
-    .bind(payload.temperature.value())
-    .bind(payload.humidity.map(crate::domain::telemetry::Humidity::value))
-    .bind(payload.ph.map(crate::domain::telemetry::Ph::value))
-    .bind(payload.dissolved_oxygen.map(crate::domain::telemetry::DissolvedOxygen::value))
-    .bind(payload.pressure.map(crate::domain::telemetry::Pressure::value))
-    .bind(payload.gas_resistance.map(crate::domain::telemetry::GasResistance::value))
-    .bind(payload.co2.map(crate::domain::telemetry::Co2::value))
-    .execute(&state.db_pool)
-    .await;
-
-    match query_result {
-        Ok(_) => {
-            {
-                let mut twin = state.digital_twin.write().await;
-                twin.insert(payload.device_id.clone(), payload.clone());
-            }
-
-            tracing::info!(
-                "Recibida telemetría PROTOBUF desde {}: Temp = {}°C",
-                payload.device_id,
-                payload.temperature.value()
-            );
-
-            Ok((StatusCode::CREATED, "Telemetría Protobuf persistida correctamente"))
-        }
-        Err(e) => {
-            tracing::error!("Error insertando Protobuf en la DB: {}", e);
-            Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Error interno al procesar telemetría binaria".to_string(),
-            ))
-        }
+    // 3. Actualizamos el Gemelo Digital en RAM
+    {
+        let mut twin = state.digital_twin.write().await;
+        twin.insert(payload.device_id.clone(), payload.clone());
     }
+
+    // 4. Persistencia Asíncrona (Buffer) y Streaming (WebSockets)
+    let _ = state.tx_ws.send(payload.clone());
+
+    if let Err(e) = state.tx_db.send(payload.clone()).await {
+        tracing::error!(
+            "Buffer de persistencia lleno. Se perdió telemetría PROTOBUF de {}: {}",
+            payload.device_id,
+            e
+        );
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Persistencia temporalmente inhabilitada (Buffer saturado)".to_string(),
+        ));
+    }
+
+    tracing::info!(
+        "Recibida telemetría PROTOBUF desde {}: Temp = {}°C (Encolada)",
+        payload.device_id,
+        payload.temperature.value()
+    );
+
+    Ok((StatusCode::ACCEPTED, "Telemetría Protobuf encolada correctamente"))
 }

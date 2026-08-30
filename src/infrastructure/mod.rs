@@ -7,3 +7,4 @@
 //! Módulo de infraestructura (Base de Datos, Redis, etc.)
 
 pub mod db;
+pub mod worker;

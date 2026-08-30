@@ -10,3 +10,5 @@ pub mod chat;
 pub mod digital_twin;
 /// Submódulo encargado de la recepción y validación HTTP de la telemetría.
 pub mod telemetry;
+/// Submódulo encargado del streaming y control en tiempo real.
+pub mod ws;
