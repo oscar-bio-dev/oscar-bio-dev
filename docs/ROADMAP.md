@@ -45,15 +45,15 @@ To ensure relentless quality and comply with industrial standards, the platform'
 ### 🟣 Phase 5: Edge & Cloud AI Synergy (Cognitive Digital Twin)
 - [ ] **Edge Inference Engine (TinyML):** Integration of Machine Learning models (exported via Edge Impulse) directly into Rust/C++ firmware using `tract` or `ort`.
 - [ ] **Real-Time Edge Classification:** Microcontroller-level (ESP32, STM32, Microchip Technology, Texas Instruments) analysis of water/soil quality data for ultra-low latency anomaly detection and alerts.
-- [ ] **Digital Twin Architecture:** In-memory virtual representation of the current state of all deployed hardware nodes.
-- [ ] **Generative AI Hub Interface:** Integration of the Gemini LLM via serverless backend (Firebase Cloud Functions) to act as a conversational expert system, dynamically analyzing real-time telemetry and Digital Twin states to provide natural language insights.
+- [x] **Digital Twin Architecture:** In-memory virtual representation of the current state of all deployed hardware nodes.
+- [x] **Generative AI Hub Interface:** Integration of the Gemini LLM via Rust Axum backend to act as a conversational expert system (EcoTech), dynamically analyzing real-time telemetry and Digital Twin states to provide natural language insights.
 - [x] **Agent Terminal UI:** A minimalist terminal web component, acting as the frontend interface to query the Cognitive Digital Twin.
 
 ### ⚫ Phase 6: Space Grade (Orbital & Wasm)
-- [ ] **Reactive Wasm Frontend:** Interactive graphical interface (dashboard) compiled to **WebAssembly** (e.g., Leptos or Dioxus), eliminating external JS frameworks.
-- [ ] **Extreme Optimization:** Release binaries optimized with LTO (*Link Time Optimization*), symbol `strip`, and `opt-level = "z"`.
-- [ ] **Distroless Containerization:** Creation of ultra-lightweight Docker images (`scratch` or `distroless`, < 15MB) shielded against OS-level vulnerabilities.
-- [ ] **Hardware Security (mTLS):** Mutual TLS authentication using `rustls` to ensure that only sensors with valid cryptographic certificates can publish data.
+- [x] **Reactive Wasm Frontend:** Interactive graphical interface (dashboard) compiled to **WebAssembly** (e.g., Leptos or Dioxus), eliminating external JS frameworks.
+- [x] **Trunk/Leptos CSR:** Transition of the user interface to Leptos (Wasm) for reactive visualization of high-frequency data without JS overhead.
+- [x] **Distroless Containerization:** Creation of ultra-lightweight Docker images (`scratch` or `distroless`, < 15MB) shielded against OS-level vulnerabilities.
+- [x] **Hardware Security (mTLS):** Mutual TLS authentication using `rustls` to ensure that only sensors with valid cryptographic certificates can publish data.
 
 ---
 

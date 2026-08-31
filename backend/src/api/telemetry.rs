@@ -5,9 +5,9 @@
 // Proprietary and confidential.
 
 use crate::domain::state::AppState;
-use crate::domain::telemetry::{TelemetryPayload, TelemetryPayloadPb};
 use axum::{body::Bytes, extract::State, http::StatusCode, response::IntoResponse, Json};
 use prost::Message;
+use shared::{TelemetryPayload, TelemetryPayloadPb};
 use validator::Validate;
 
 /// Endpoint para la ingesta de datos provenientes de los sensores de campo.

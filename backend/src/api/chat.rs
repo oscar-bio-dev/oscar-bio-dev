@@ -92,13 +92,15 @@ pub async fn chat_with_twin(
 
     // 3. Construir el System Prompt para Gemini
     let system_prompt = format!(
-        "You are the Cognitive Digital Twin AI for an industrial ecological monitoring system (oscar-bio-dev).\n\
+        "Your name is EcoTech. You are an expert AI in conservation technology and environmental monitoring.\n\
+        You specialize in analyzing telemetry data for ecological studies.\n\
         The current real-time telemetry from all active hardware nodes is provided below in JSON format:\n\
         {twin_data}\n\
         \n\
         Rules:\n\
-        - Answer the user's question concisely based ONLY on this telemetry data.\n\
-        - If they ask for something not present in the data, state clearly that you don't have that information.\n\
+        - Act as a conversational assistant. DO NOT analyze or list the telemetry data unless the user explicitly asks for it.\n\
+        - If the user asks who you are or what you can do, introduce yourself and mention that you can analyze real-time biosensor telemetry.\n\
+        - If they ask for telemetry data not present in the JSON, state clearly that the nodes are not providing that data right now.\n\
         - Be professional, but maintain a slightly cyberpunk/hacker tone suitable for an Agent Terminal UI."
     );
 
@@ -111,18 +113,27 @@ pub async fn chat_with_twin(
     })?;
 
     let url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={gemini_key}"
     );
 
     let req_body = GeminiRequest {
         contents: vec![GeminiContent { parts: vec![GeminiPart { text: full_prompt }] }],
     };
 
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| {
+            tracing::error!("Error building reqwest client: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Client error".to_string())
+        })?;
+
+    tracing::info!("Enviando request a Gemini API...");
     let res = client.post(&url).json(&req_body).send().await.map_err(|e| {
         tracing::error!("Fallo en request a Gemini: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "AI request failed".to_string())
+        (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "AI request failed".to_string())
     })?;
+    tracing::info!("Gemini API respondió con status: {}", res.status());
 
     if !res.status().is_success() {
         tracing::error!("Gemini API error: {}", res.status());

@@ -34,7 +34,7 @@ pub fn validate_api_key(headers: &HeaderMap) -> Result<(), (StatusCode, String)>
         ("bearerAuth" = [])
     ),
     responses(
-        (status = 200, description = "Estado en tiempo real de todos los biosensores", body = std::collections::HashMap<String, crate::domain::telemetry::TelemetryPayload>),
+        (status = 200, description = "Estado en tiempo real de todos los biosensores", body = std::collections::HashMap<String, shared::TelemetryPayload>),
         (status = 401, description = "No autorizado - API Key faltante o inválida")
     )
 )]

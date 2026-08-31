@@ -1,0 +1,21 @@
+[package]
+name = "frontend"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+leptos = { version = "0.6", features = ["csr"] }
+leptos_meta = { version = "0.6", features = ["csr"] }
+leptos_router = { version = "0.6", features = ["csr"] }
+shared = { path = "../shared" }
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+reqwest = { version = "0.12", features = ["json"] }
+# Para WebSockets en Wasm
+futures = "0.3"
+gloo-net = { version = "0.3", features = ["websocket"] }
+tokio = { version = "1", features = ["sync", "macros"] }
+console_error_panic_hook = "0.1"
+
+[lints]
+workspace = true

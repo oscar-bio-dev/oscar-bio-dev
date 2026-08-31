@@ -6,7 +6,7 @@
 
 //! Memoria compartida del servidor (Gemelo Digital).
 
-use crate::domain::telemetry::TelemetryPayload;
+use shared::TelemetryPayload;
 use sqlx::PgPool;
 use std::collections::HashMap;
 use std::sync::Arc;

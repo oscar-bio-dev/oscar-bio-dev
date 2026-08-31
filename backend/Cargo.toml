@@ -1,0 +1,47 @@
+[package]
+name = "backend"
+version = "0.1.0"
+edition = "2021"
+authors = ["oscar-bio-dev"]
+repository = "https://github.com/oscar-bio-dev/oscar-bio-dev"
+keywords = ["iot", "telemetry", "rust"]
+categories = ["science", "embedded"]
+description = "Industrial grade telemetry hub for environmental monitoring"
+license-file = "LICENSE.txt"
+
+[dependencies]
+shared = { path = "../shared" }
+# El servidor web (router)
+axum = { version = "0.7", features = ["ws", "macros"] }
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+rustls = { version = "0.23", features = ["ring"] }
+rustls-pemfile = "2.1"
+# El runtime asíncrono
+tokio = { version = "1.36", features = ["full"] }
+# Motor de plantillas (compila HTML al binario)
+askama = "0.12"
+# Para servir archivos estáticos (CSS, imágenes)
+tower-http = { version = "0.5", features = ["fs", "cors", "trace", "timeout", "limit"] }
+chrono = { version = "0.4.45", features = ["serde"] }
+serde = { version = "1.0.229", features = ["derive"] }
+thiserror = "2.0.20"
+serde_json = "1.0.151"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+utoipa = { version = "4", features = ["axum_extras", "chrono"] }
+utoipa-swagger-ui = { version = "7", features = ["axum"] }
+tower = { version = "0.5", features = ["timeout", "limit"] }
+tower_governor = "0.4.2"
+sqlx = { version = "0.8", features = ["runtime-tokio", "tls-rustls", "postgres", "chrono", "uuid"] }
+validator = { version = "0.19", features = ["derive"] }
+dotenvy = "0.15"
+prost = "0.13"
+bytes = "1.5"
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+futures-util = "0.3"
+
+[dev-dependencies]
+proptest = "1.4"
+
+[lints]
+workspace = true

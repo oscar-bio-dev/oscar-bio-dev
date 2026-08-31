@@ -194,3 +194,8 @@ footer {
         text-align: center;
     }
 }
+
+.header-link {
+    text-decoration: none;
+    color: inherit;
+}

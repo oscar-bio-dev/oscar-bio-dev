@@ -1,0 +1,21 @@
+[package]
+name = "shared"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "2.0"
+utoipa = "4.2"
+validator = { version = "0.19", features = ["derive"] }
+prost = "0.13"
+lazy_static = "1.5"
+regex = "1.10"
+
+[dev-dependencies]
+proptest = "1.4"
+
+[lints]
+workspace = true

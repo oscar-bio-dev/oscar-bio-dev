@@ -6,5 +6,3 @@
 
 /// Estado global concurrente (Gemelo Digital).
 pub mod state;
-/// Definiciones de tipos físicos y reglas de negocio para sensores ambientales.
-pub mod telemetry;

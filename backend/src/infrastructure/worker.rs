@@ -3,7 +3,7 @@
 
 //! Background workers para retención de datos y procesamiento asíncrono.
 
-use crate::domain::telemetry::TelemetryPayload;
+use shared::TelemetryPayload;
 use sqlx::PgPool;
 use tokio::sync::mpsc;
 
@@ -23,12 +23,12 @@ pub fn start_db_worker(db_pool: PgPool, mut rx: mpsc::Receiver<TelemetryPayload>
             .bind(&payload.device_id)
             .bind(payload.timestamp)
             .bind(payload.temperature.value())
-            .bind(payload.humidity.map(crate::domain::telemetry::Humidity::value))
-            .bind(payload.ph.map(crate::domain::telemetry::Ph::value))
-            .bind(payload.dissolved_oxygen.map(crate::domain::telemetry::DissolvedOxygen::value))
-            .bind(payload.pressure.map(crate::domain::telemetry::Pressure::value))
-            .bind(payload.gas_resistance.map(crate::domain::telemetry::GasResistance::value))
-            .bind(payload.co2.map(crate::domain::telemetry::Co2::value))
+            .bind(payload.humidity.map(shared::Humidity::value))
+            .bind(payload.ph.map(shared::Ph::value))
+            .bind(payload.dissolved_oxygen.map(shared::DissolvedOxygen::value))
+            .bind(payload.pressure.map(shared::Pressure::value))
+            .bind(payload.gas_resistance.map(shared::GasResistance::value))
+            .bind(payload.co2.map(shared::Co2::value))
             .execute(&db_pool)
             .await;
 
