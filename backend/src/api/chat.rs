@@ -1,14 +1,8 @@
 // Copyright (c) 2026 Oscar Mora / SetaeSense. All rights reserved.
 // Proprietary and confidential.
 
-use crate::api::digital_twin::validate_api_key;
 use crate::domain::state::AppState;
-use axum::{
-    extract::State,
-    http::{HeaderMap, StatusCode},
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 use std::env;
 
@@ -77,13 +71,9 @@ struct GeminiPartResp {
 )]
 #[allow(clippy::unused_async)]
 pub async fn chat_with_twin(
-    headers: HeaderMap,
     State(state): State<AppState>,
     Json(payload): Json<ChatRequest>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    // 1. Autenticación
-    validate_api_key(&headers)?;
-
     // 2. Extraer estado del Gemelo Digital
     let twin_data = {
         let twin = state.digital_twin.read().await;

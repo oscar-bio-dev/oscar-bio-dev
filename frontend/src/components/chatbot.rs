@@ -36,13 +36,14 @@ pub fn Chatbot() -> impl IntoView {
 
             let req_body = ChatRequest { message: msg_clone };
 
+            let window = web_sys::window().expect("no global `window` exists");
+            let location = window.location();
+            let host = location.host().expect("should have a host");
+            let protocol = location.protocol().expect("should have a protocol");
+            let api_url = format!("{protocol}//{host}/api/chat");
+
             let client = reqwest::Client::new();
-            let res = client
-                .post("https://localhost:3000/api/chat")
-                .header("Authorization", "Bearer default_secure_key_123")
-                .json(&req_body)
-                .send()
-                .await;
+            let res = client.post(&api_url).json(&req_body).send().await;
 
             match res {
                 Ok(resp) => {

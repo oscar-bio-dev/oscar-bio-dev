@@ -80,6 +80,7 @@ use backend::domain::state::AppState;
 use std::sync::Arc;
 use std::time::Duration;
 use tower::timeout::TimeoutLayer;
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::limit::RequestBodyLimitLayer;
 
 use axum::{error_handling::HandleErrorLayer, BoxError};
@@ -91,7 +92,7 @@ use rustls::server::WebPkiClientVerifier;
 use rustls::RootCertStore;
 use rustls::ServerConfig;
 
-fn build_mtls_config() -> RustlsConfig {
+fn build_tls_configs() -> (RustlsConfig, RustlsConfig) {
     let mut root_store = RootCertStore::empty();
     let ca_file = std::fs::File::open("certs/ca.crt").expect("No se encontró certs/ca.crt");
     let mut ca_reader = std::io::BufReader::new(ca_file);
@@ -100,13 +101,13 @@ fn build_mtls_config() -> RustlsConfig {
         root_store.add(cert).unwrap();
     }
 
-    let client_auth =
-        WebPkiClientVerifier::builder(root_store.into()).allow_unauthenticated().build().unwrap();
+    let strict_client_auth = WebPkiClientVerifier::builder(root_store.into()).build().unwrap();
 
     let cert_file =
         std::fs::File::open("certs/server.crt").expect("No se encontró certs/server.crt");
     let mut cert_reader = std::io::BufReader::new(cert_file);
-    let cert_chain = rustls_pemfile::certs(&mut cert_reader).filter_map(Result::ok).collect();
+    let cert_chain: Vec<_> =
+        rustls_pemfile::certs(&mut cert_reader).filter_map(Result::ok).collect();
 
     let key_file =
         std::fs::File::open("certs/server.key").expect("No se encontró certs/server.key");
@@ -115,14 +116,23 @@ fn build_mtls_config() -> RustlsConfig {
         .expect("No se pudo leer la llave")
         .expect("No key found");
 
-    let mut server_config = ServerConfig::builder()
-        .with_client_cert_verifier(client_auth)
-        .with_single_cert(cert_chain, key)
+    let mut strict_server_config = ServerConfig::builder()
+        .with_client_cert_verifier(strict_client_auth)
+        .with_single_cert(cert_chain.clone(), key.clone_key())
         .expect("Mala configuración mTLS");
 
-    server_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+    let mut public_server_config = ServerConfig::builder()
+        .with_no_client_auth()
+        .with_single_cert(cert_chain, key)
+        .expect("Mala configuración TLS público");
 
-    RustlsConfig::from_config(Arc::new(server_config))
+    strict_server_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+    public_server_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+
+    (
+        RustlsConfig::from_config(Arc::new(public_server_config)),
+        RustlsConfig::from_config(Arc::new(strict_server_config)),
+    )
 }
 
 #[tokio::main]
@@ -154,14 +164,12 @@ async fn main() {
     // Estado concurrente
     let app_state = AppState::new(db_pool, tx_db, tx_ws);
 
-    // Definimos las rutas y la carpeta de archivos estáticos (assets)
-    let app = Router::new()
+    // Configurar rate limiting para la API pública (ej. 2 requests por segundo, burst de 10)
+    let governor_conf =
+        Arc::new(GovernorConfigBuilder::default().per_second(2).burst_size(10).finish().unwrap());
+
+    let public_app = Router::new()
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
-        .route("/api/telemetry", axum::routing::post(backend::api::telemetry::ingest_telemetry))
-        .route(
-            "/api/telemetry/protobuf",
-            axum::routing::post(backend::api::telemetry::ingest_telemetry_protobuf),
-        )
         .route(
             "/api/digital-twin",
             axum::routing::get(backend::api::digital_twin::get_digital_twin),
@@ -181,11 +189,30 @@ async fn main() {
                         format!("Request dropped by protection layer: {err}"),
                     )
                 }))
+                .layer(TimeoutLayer::new(Duration::from_secs(30)))
+                .layer(GovernorLayer { config: governor_conf }),
+        )
+        .with_state(app_state.clone());
+
+    let strict_app = Router::new()
+        .route("/api/telemetry", axum::routing::post(backend::api::telemetry::ingest_telemetry))
+        .route(
+            "/api/telemetry/protobuf",
+            axum::routing::post(backend::api::telemetry::ingest_telemetry_protobuf),
+        )
+        .layer(
+            tower::ServiceBuilder::new()
+                .layer(RequestBodyLimitLayer::new(16 * 1024))
+                .layer(HandleErrorLayer::new(|err: BoxError| async move {
+                    (
+                        axum::http::StatusCode::REQUEST_TIMEOUT,
+                        format!("Request dropped by protection layer: {err}"),
+                    )
+                }))
                 .layer(TimeoutLayer::new(Duration::from_secs(30))),
         )
         .with_state(app_state);
 
-    // Arrancamos el servidor
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let mut host = std::env::var("APP_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
 
@@ -193,15 +220,26 @@ async fn main() {
         host = "127.0.0.1".to_string();
     }
 
-    let addr = format!("{host}:{port}");
-    let socket_addr: std::net::SocketAddr = addr.parse().expect("Formato de HOST IP inválido");
+    let public_addr = format!("{host}:{port}");
+    let public_socket: std::net::SocketAddr =
+        public_addr.parse().expect("Formato de HOST IP inválido");
 
-    let tls_config = build_mtls_config();
+    let strict_addr = format!("{host}:8443");
+    let strict_socket: std::net::SocketAddr =
+        strict_addr.parse().expect("Formato de HOST IP inválido");
 
-    tracing::info!("Servidor mTLS corriendo en https://{}", addr);
+    let (public_tls, strict_tls) = build_tls_configs();
 
-    axum_server::bind_rustls(socket_addr, tls_config)
-        .serve(app.into_make_service_with_connect_info::<std::net::SocketAddr>())
-        .await
-        .unwrap();
+    tracing::info!("Servidor web público (sin client auth) en https://{}", public_addr);
+    tracing::info!("Servidor IoT mTLS estricto en https://{}", strict_addr);
+
+    let public_server = axum_server::bind_rustls(public_socket, public_tls)
+        .serve(public_app.into_make_service_with_connect_info::<std::net::SocketAddr>());
+
+    let strict_server = axum_server::bind_rustls(strict_socket, strict_tls)
+        .serve(strict_app.into_make_service_with_connect_info::<std::net::SocketAddr>());
+
+    let (res_pub, res_strict) = tokio::join!(public_server, strict_server);
+    res_pub.unwrap();
+    res_strict.unwrap();
 }

@@ -11,8 +11,13 @@ pub fn RoomMonitoring() -> impl IntoView {
         create_signal(std::collections::HashMap::<String, TelemetryPayload>::new());
 
     create_effect(move |_| {
-        let ws_url = "wss://localhost:3000/api/ws";
-        if let Ok(ws) = WebSocket::open(ws_url) {
+        let window = web_sys::window().expect("no global `window` exists");
+        let location = window.location();
+        let host = location.host().expect("should have a host");
+        let protocol = location.protocol().expect("should have a protocol");
+        let ws_protocol = if protocol == "https:" { "wss:" } else { "ws:" };
+        let ws_url = format!("{ws_protocol}//{host}/api/ws");
+        if let Ok(ws) = WebSocket::open(&ws_url) {
             let (_, mut read) = ws.split();
 
             spawn_local(async move {
