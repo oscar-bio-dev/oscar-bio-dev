@@ -60,12 +60,8 @@ struct GeminiPartResp {
     post,
     path = "/api/chat",
     request_body = ChatRequest,
-    security(
-        ("bearerAuth" = [])
-    ),
     responses(
         (status = 200, description = "Respuesta de la IA", body = ChatResponse),
-        (status = 401, description = "No autorizado - API Key faltante o inválida"),
         (status = 500, description = "Error interno al comunicarse con Gemini")
     )
 )]

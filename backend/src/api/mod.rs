@@ -8,6 +8,8 @@
 pub mod chat;
 /// Submódulo encargado de la lectura global del gemelo digital.
 pub mod digital_twin;
+/// Submódulo de Kubernetes Probes
+pub mod health;
 /// Submódulo encargado de la recepción y validación HTTP de la telemetría.
 pub mod telemetry;
 /// Submódulo encargado del streaming y control en tiempo real.

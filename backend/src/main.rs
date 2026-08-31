@@ -76,12 +76,15 @@ impl Modify for SecurityAddon {
     }
 }
 
+use axum::http::Method;
 use backend::domain::state::AppState;
 use std::sync::Arc;
 use std::time::Duration;
 use tower::timeout::TimeoutLayer;
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
+use tower_http::cors::{Any, CorsLayer};
 use tower_http::limit::RequestBodyLimitLayer;
+use tower_http::trace::TraceLayer;
 
 use axum::{error_handling::HandleErrorLayer, BoxError};
 
@@ -135,7 +138,13 @@ fn build_tls_configs() -> (RustlsConfig, RustlsConfig) {
     )
 }
 
+async fn shutdown_signal() {
+    tokio::signal::ctrl_c().await.expect("Failed to install CTRL+C signal handler");
+    tracing::info!("Received Ctrl-C, shutting down gracefully...");
+}
+
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() {
     let _ = rustls::crypto::ring::default_provider().install_default();
 
@@ -168,13 +177,33 @@ async fn main() {
     let governor_conf =
         Arc::new(GovernorConfigBuilder::default().per_second(2).burst_size(10).finish().unwrap());
 
+    // Chat API stricter rate limiting: ~5 requests per minute
+    let chat_governor_conf = Arc::new(
+        GovernorConfigBuilder::default()
+            .per_second(12) // 1 request every 12 seconds = 5 req/min
+            .burst_size(2)
+            .finish()
+            .unwrap(),
+    );
+
+    let cors_layer = CorsLayer::new()
+        .allow_origin("https://oscar-bio.dev".parse::<axum::http::HeaderValue>().unwrap())
+        .allow_methods([Method::GET, Method::POST])
+        .allow_headers(Any);
+
     let public_app = Router::new()
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        .route("/health", axum::routing::get(backend::api::health::liveness_probe))
+        .route("/ready", axum::routing::get(backend::api::health::readiness_probe))
         .route(
             "/api/digital-twin",
             axum::routing::get(backend::api::digital_twin::get_digital_twin),
         )
-        .route("/api/chat", axum::routing::post(backend::api::chat::chat_with_twin))
+        .route(
+            "/api/chat",
+            axum::routing::post(backend::api::chat::chat_with_twin)
+                .layer(GovernorLayer { config: chat_governor_conf }),
+        )
         .route("/api/ws", axum::routing::get(backend::api::ws::ws_handler))
         .fallback_service(
             ServeDir::new("frontend/dist")
@@ -192,6 +221,8 @@ async fn main() {
                 .layer(TimeoutLayer::new(Duration::from_secs(30)))
                 .layer(GovernorLayer { config: governor_conf }),
         )
+        .layer(TraceLayer::new_for_http())
+        .layer(cors_layer)
         .with_state(app_state.clone());
 
     let strict_app = Router::new()
@@ -211,6 +242,7 @@ async fn main() {
                 }))
                 .layer(TimeoutLayer::new(Duration::from_secs(30))),
         )
+        .layer(TraceLayer::new_for_http())
         .with_state(app_state);
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
@@ -233,10 +265,19 @@ async fn main() {
     tracing::info!("Servidor web público (sin client auth) en https://{}", public_addr);
     tracing::info!("Servidor IoT mTLS estricto en https://{}", strict_addr);
 
+    let handle = axum_server::Handle::new();
+    let handle_clone = handle.clone();
+    tokio::spawn(async move {
+        shutdown_signal().await;
+        handle_clone.graceful_shutdown(Some(Duration::from_secs(10)));
+    });
+
     let public_server = axum_server::bind_rustls(public_socket, public_tls)
+        .handle(handle.clone())
         .serve(public_app.into_make_service_with_connect_info::<std::net::SocketAddr>());
 
     let strict_server = axum_server::bind_rustls(strict_socket, strict_tls)
+        .handle(handle)
         .serve(strict_app.into_make_service_with_connect_info::<std::net::SocketAddr>());
 
     let (res_pub, res_strict) = tokio::join!(public_server, strict_server);
