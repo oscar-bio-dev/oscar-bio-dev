@@ -1,0 +1,30 @@
+# Version control
+.git
+.gitignore
+
+# Compiled artifacts and build directories
+target/
+frontend/dist/
+**/*.wasm
+**/*.js
+
+# Secrets and Environment
+.env
+.env.local
+.env.*
+
+# IDEs and OS files
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Misc
+docs/
+README.md
+CHANGELOG.md
+CONTRIBUTING.md
+ROADMAP.md
+*.pdf
+*.png

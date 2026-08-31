@@ -49,6 +49,7 @@ graph TD
 ### Key Features
 - **Zero-Cost Binary Pipelines**: Uses `prost` (Protobuf) for ultra-fast, zero-allocation telemetry deserialization.
 - **Hardware Security (mTLS)**: Mutual TLS authentication to ensure that only physical nodes with valid cryptographic certificates can publish data to the `Axum` backend.
+- **Dual-Port Edge/Cloud Routing**: Segregation of traffic where Port 3000 serves the public UI and Chatbot (rate-limited), while Port 8443 exclusively handles mTLS IoT sensor ingestion.
 - **Cognitive Digital Twin**: An in-memory, thread-safe state representation (`Arc<RwLock<HashMap>>`) of all physical nodes.
 - **EcoTech Agent Integration**: Direct integration with Gemini Flash Lite (`reqwest`), giving the system an expert conversational interface with real-time reasoning over environmental hardware data.
 - **WebAssembly (Wasm) Dashboard**: A custom-built, hacker-styled Single Page Application using **Leptos**, avoiding JS bloat and offering native Rust performance in the browser.

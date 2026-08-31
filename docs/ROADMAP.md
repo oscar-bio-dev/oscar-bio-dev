@@ -32,7 +32,7 @@ To ensure relentless quality and comply with industrial standards, the platform'
 - [x] **Concurrent Shared State:** Safe dependency injection (`State`, `Arc`, `RwLock`) in Axum to handle the global state of the sensor fleet.
 - [x] **Graceful Shutdown:** Interception of system signals (SIGINT/SIGTERM) for a safe shutdown without losing telemetry data in flight.
 - [x] **Traffic Protection:** `tower` middlewares for *Rate Limiting* and *Timeout*, preventing saturation from burst data sent by faulty hardware.
-- [x] **Rigorous Testing (Mocking & Fuzzing):** Use of `proptest` (Property-Based Testing) against endpoints and `mockall` to mock and test behavior without physical hardware connected.
+- [x] **Rigorous Testing (Fuzzing):** Use of `proptest` (Property-Based Testing) against endpoints and logic to test behavior without physical hardware connected.
 
 ### 🔵 Phase 4: Persistence and Time-Series Flow
 - [x] **Database Layer:** Asynchronous `sqlx` with compile-time query verification.
