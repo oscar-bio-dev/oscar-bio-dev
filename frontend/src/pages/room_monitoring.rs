@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Oscar Mora / SetaeSense. All rights reserved.
 
 use futures::StreamExt;
-use gloo_net::websocket::{Message, futures::WebSocket};
+use gloo_net::websocket::{futures::WebSocket, Message};
 use leptos::*;
 use shared::TelemetryPayload;
 

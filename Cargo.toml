@@ -6,6 +6,17 @@ members = [
 ]
 resolver = "2"
 
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+authors = ["oscar-bio-dev"]
+repository = "https://github.com/oscar-bio-dev/oscar-bio-dev"
+keywords = ["iot", "telemetry", "rust"]
+categories = ["science", "embedded"]
+description = "Industrial grade telemetry hub for environmental monitoring"
+license-file = "LICENSE.txt"
+readme = "README.md"
+
 [profile.release]
 opt-level = "z"
 lto = true

@@ -91,29 +91,34 @@ use rustls::server::WebPkiClientVerifier;
 use rustls::RootCertStore;
 use rustls::ServerConfig;
 
-async fn build_mtls_config() -> RustlsConfig {
+fn build_mtls_config() -> RustlsConfig {
     let mut root_store = RootCertStore::empty();
-    let ca_file = std::fs::File::open("certs/ca.crt").expect("No se encontró ca.crt");
+    let ca_file = std::fs::File::open("certs/ca.crt").expect("No se encontró certs/ca.crt");
     let mut ca_reader = std::io::BufReader::new(ca_file);
-    for cert in rustls_pemfile::certs(&mut ca_reader) {
-        root_store.add(cert.expect("CA cert invalido")).unwrap();
+    let certs = rustls_pemfile::certs(&mut ca_reader).filter_map(Result::ok);
+    for cert in certs {
+        root_store.add(cert).unwrap();
     }
 
-    let client_verifier =
+    let client_auth =
         WebPkiClientVerifier::builder(root_store.into()).allow_unauthenticated().build().unwrap();
 
-    let cert_file = std::fs::File::open("certs/server.crt").expect("No se encontró server.crt");
+    let cert_file =
+        std::fs::File::open("certs/server.crt").expect("No se encontró certs/server.crt");
     let mut cert_reader = std::io::BufReader::new(cert_file);
-    let certs: Vec<_> = rustls_pemfile::certs(&mut cert_reader).map(|c| c.unwrap()).collect();
+    let cert_chain = rustls_pemfile::certs(&mut cert_reader).filter_map(Result::ok).collect();
 
-    let key_file = std::fs::File::open("certs/server.key").expect("No se encontró server.key");
+    let key_file =
+        std::fs::File::open("certs/server.key").expect("No se encontró certs/server.key");
     let mut key_reader = std::io::BufReader::new(key_file);
-    let key = rustls_pemfile::private_key(&mut key_reader).unwrap().unwrap();
+    let key = rustls_pemfile::private_key(&mut key_reader)
+        .expect("No se pudo leer la llave")
+        .expect("No key found");
 
     let mut server_config = ServerConfig::builder()
-        .with_client_cert_verifier(client_verifier)
-        .with_single_cert(certs, key)
-        .unwrap();
+        .with_client_cert_verifier(client_auth)
+        .with_single_cert(cert_chain, key)
+        .expect("Mala configuración mTLS");
 
     server_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
 
@@ -188,10 +193,10 @@ async fn main() {
         host = "127.0.0.1".to_string();
     }
 
-    let addr = format!("{}:{}", host, port);
+    let addr = format!("{host}:{port}");
     let socket_addr: std::net::SocketAddr = addr.parse().expect("Formato de HOST IP inválido");
 
-    let tls_config = build_mtls_config().await;
+    let tls_config = build_mtls_config();
 
     tracing::info!("Servidor mTLS corriendo en https://{}", addr);
 
@@ -199,28 +204,4 @@ async fn main() {
         .serve(app.into_make_service_with_connect_info::<std::net::SocketAddr>())
         .await
         .unwrap();
-}
-
-async fn shutdown_signal() {
-    let ctrl_c = async {
-        tokio::signal::ctrl_c().await.expect("Failed to install Ctrl+C handler");
-    };
-
-    #[cfg(unix)]
-    let terminate = async {
-        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-            .expect("Failed to install signal handler")
-            .recv()
-            .await;
-    };
-
-    #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
-
-    tokio::select! {
-        () = ctrl_c => {},
-        () = terminate => {},
-    }
-
-    tracing::info!("Señal de apagado recibida, iniciando Graceful Shutdown...");
 }

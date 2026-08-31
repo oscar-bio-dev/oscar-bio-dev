@@ -1,13 +1,14 @@
 [package]
 name = "backend"
-version = "0.1.0"
-edition = "2021"
-authors = ["oscar-bio-dev"]
-repository = "https://github.com/oscar-bio-dev/oscar-bio-dev"
-keywords = ["iot", "telemetry", "rust"]
-categories = ["science", "embedded"]
-description = "Industrial grade telemetry hub for environmental monitoring"
-license-file = "LICENSE.txt"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description.workspace = true
+license-file.workspace = true
+readme.workspace = true
 
 [dependencies]
 shared = { path = "../shared" }
