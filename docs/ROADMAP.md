@@ -61,10 +61,19 @@ To ensure relentless quality and comply with industrial standards, the platform'
 
 This repository is configured with the strictest rules. To contribute or spin up the project:
 
-1. **Required tools:** Rust (via `rustup`). The version (`stable`) and components will be automatically pinned thanks to `rust-toolchain.toml`.
-2. **Running the server in development mode:**
+1. **Required tools:** Rust (via `rustup`), Docker (for TimescaleDB), and Trunk (`cargo install trunk`).
+2. **Start the Spatial-Temporal Database:**
    ```bash
-   cargo run
+   docker-compose up -d
+   ```
+3. **Build the Wasm Frontend:**
+   ```bash
+   cd frontend && trunk build
+   cd ..
+   ```
+4. **Run the Axum Server:**
+   ```bash
+   cargo run -p backend
    ```
 3. **Mandatory static analysis (Linting):**
    ```bash
