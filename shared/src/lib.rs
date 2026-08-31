@@ -289,3 +289,68 @@ impl TryFrom<TelemetryPayloadPb> for TelemetryPayload {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn test_ph_validation(val in -1.0..15.0f64) {
+            let ph = Ph::new(val);
+            if (0.0..=14.0).contains(&val) {
+                assert!(ph.is_ok());
+            } else {
+                assert!(ph.is_err());
+            }
+        }
+
+        #[test]
+        fn test_temperature_validation(val in -60.0..160.0f64) {
+            let temp = Temperature::new(val);
+            if (-50.0..=150.0).contains(&val) {
+                assert!(temp.is_ok());
+            } else {
+                assert!(temp.is_err());
+            }
+        }
+
+        #[test]
+        fn test_telemetry_protobuf_conversion(
+            temp in -50.0..150.0f64,
+            hum in 0.0..100.0f64
+        ) {
+            let pb = TelemetryPayloadPb {
+                device_id: "test-node".to_string(),
+                timestamp_epoch_ms: 1700000000000,
+                temperature: temp,
+                humidity: Some(hum),
+                ph: None,
+                dissolved_oxygen: None,
+                pressure: None,
+                gas_resistance: None,
+                co2: None,
+            };
+
+            let payload: Result<TelemetryPayload, _> = pb.try_into();
+            assert!(payload.is_ok());
+        }
+    }
+
+    #[test]
+    fn test_invalid_json_deserialization() {
+        let json =
+            r#"{"device_id":"node-1","timestamp":"2026-08-30T10:00:00Z","temperature": 999.0}"#;
+        let result: Result<TelemetryPayload, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_valid_json_deserialization() {
+        let json =
+            r#"{"device_id":"node-1","timestamp":"2026-08-30T10:00:00Z","temperature": 25.5}"#;
+        let result: Result<TelemetryPayload, _> = serde_json::from_str(json);
+        assert!(result.is_ok());
+    }
+}

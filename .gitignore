@@ -30,3 +30,6 @@ Thumbs.db
 
 # Cryptography and mTLS
 certs/
+
+# WebAssembly
+frontend/dist/

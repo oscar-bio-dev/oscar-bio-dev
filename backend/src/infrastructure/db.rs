@@ -19,7 +19,7 @@ pub async fn init_db_pool() -> Result<PgPool, sqlx::Error> {
 
     tracing::info!("Conectando a la base de datos...");
 
-    let pool = PgPoolOptions::new().max_connections(50).connect(&database_url).await?;
+    let pool = PgPoolOptions::new().max_connections(10).connect(&database_url).await?;
 
     Ok(pool)
 }

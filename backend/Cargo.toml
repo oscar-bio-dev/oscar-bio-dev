@@ -19,8 +19,6 @@ rustls = { version = "0.23", features = ["ring"] }
 rustls-pemfile = "2.1"
 # El runtime asíncrono
 tokio = { version = "1.36", features = ["full"] }
-# Motor de plantillas (compila HTML al binario)
-askama = "0.12"
 # Para servir archivos estáticos (CSS, imágenes)
 tower-http = { version = "0.5", features = ["fs", "cors", "trace", "timeout", "limit"] }
 chrono = { version = "0.4.45", features = ["serde"] }

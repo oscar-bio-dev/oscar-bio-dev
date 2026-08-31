@@ -35,13 +35,15 @@ WORKDIR /app
 # So we'll put the binary at /app/backend/server and execute it from /app/backend.
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/backend /app/backend/server
 COPY --from=builder /app/frontend/dist /app/frontend/dist
+COPY --from=builder /app/certs /app/backend/certs
 
-# Expose the default port
+# Expose the default ports
 EXPOSE 3000
+EXPOSE 8443
 
 # Set environment variables
 ENV PORT=3000
-ENV HOST=0.0.0.0
+ENV APP_HOST=0.0.0.0
 
 WORKDIR /app/backend
 ENTRYPOINT ["/app/backend/server"]

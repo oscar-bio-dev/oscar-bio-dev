@@ -51,12 +51,21 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
     // Nos suscribimos al canal de broadcast de telemetría
     let mut rx_telemetry = state.tx_ws.subscribe();
 
-    // Tarea 1: Leer del canal broadcast y enviar al cliente WebSocket (Streaming)
     let mut send_task = tokio::spawn(async move {
-        while let Ok(payload) = rx_telemetry.recv().await {
-            if let Ok(json_str) = serde_json::to_string(&payload) {
-                if sender.send(Message::Text(json_str)).await.is_err() {
-                    break; // Cliente desconectado
+        loop {
+            match rx_telemetry.recv().await {
+                Ok(payload) => {
+                    if let Ok(json_str) = serde_json::to_string(&payload) {
+                        if sender.send(Message::Text(json_str)).await.is_err() {
+                            break; // Cliente desconectado
+                        }
+                    }
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
+                    tracing::warn!("WebSocket client lagged behind. Skipped {} messages.", skipped);
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                    break; // Canal cerrado
                 }
             }
         }
