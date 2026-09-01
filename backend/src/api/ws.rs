@@ -12,25 +12,8 @@ use axum::{
     response::IntoResponse,
 };
 use futures_util::{sink::SinkExt, stream::StreamExt};
-use serde::{Deserialize, Serialize};
 
-/// Comando de configuración (Over-The-Air Downlink) desde el frontend/backend hacia los sensores.
-#[derive(Deserialize, Serialize, Debug)]
-#[serde(tag = "cmd")]
-pub enum OtaCommand {
-    /// Cambiar la tasa de muestreo.
-    SetSampleRate {
-        /// Frecuencia en milisegundos.
-        rate_ms: u32,
-    },
-    /// Entrar en deep sleep por un tiempo determinado.
-    DeepSleep {
-        /// Duración en segundos.
-        duration_s: u32,
-    },
-    /// Reiniciar el nodo.
-    Reboot,
-}
+// OTA Commands have been removed for security until mTLS/auth is implemented.
 
 /// Endpoint para abrir la conexión WebSocket.
 #[utoipa::path(
@@ -76,13 +59,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
         while let Some(Ok(msg)) = receiver.next().await {
             match msg {
                 Message::Text(text) => {
-                    // Intentamos parsear como OtaCommand
-                    if let Ok(cmd) = serde_json::from_str::<OtaCommand>(&text) {
-                        tracing::info!("OTA Command recibido: {:?}", cmd);
-                        // Aquí se integraría con un puente MQTT para mandar el comando físico al nodo.
-                    } else {
-                        tracing::warn!("Mensaje de WS desconocido recibido: {}", text);
-                    }
+                    tracing::debug!("Mensaje ignorado (Read-Only WS): {}", text);
                 }
                 Message::Close(_) => {
                     tracing::debug!("Cliente WebSocket cerró la conexión.");

@@ -22,6 +22,8 @@ pub struct ChatResponse {
 
 #[derive(Serialize)]
 struct GeminiRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    system_instruction: Option<GeminiContent>,
     contents: Vec<GeminiContent>,
 }
 
@@ -72,8 +74,9 @@ pub async fn chat_with_twin(
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     // 2. Extraer estado del Gemelo Digital
     let twin_data = {
-        let twin = state.digital_twin.read().await;
-        serde_json::to_string_pretty(&*twin).unwrap_or_default()
+        let state_map: std::collections::HashMap<String, shared::TelemetryPayload> =
+            state.digital_twin.read().await.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+        serde_json::to_string_pretty(&state_map).unwrap_or_default()
     };
 
     // 3. Construir el System Prompt para Gemini
@@ -90,7 +93,7 @@ pub async fn chat_with_twin(
         - Be professional, but maintain a slightly cyberpunk/hacker tone suitable for an Agent Terminal UI."
     );
 
-    let full_prompt = format!("{system_prompt}\n\nUser Question: {}", payload.message);
+    let safe_message = payload.message.chars().take(2000).collect::<String>();
 
     // 4. Llamar a la API de Gemini
     let gemini_key = env::var("GEMINI_API_KEY").map_err(|_| {
@@ -98,12 +101,11 @@ pub async fn chat_with_twin(
         (StatusCode::INTERNAL_SERVER_ERROR, "AI not configured on server".to_string())
     })?;
 
-    let url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={gemini_key}"
-    );
+    let url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent";
 
     let req_body = GeminiRequest {
-        contents: vec![GeminiContent { parts: vec![GeminiPart { text: full_prompt }] }],
+        system_instruction: Some(GeminiContent { parts: vec![GeminiPart { text: system_prompt }] }),
+        contents: vec![GeminiContent { parts: vec![GeminiPart { text: safe_message }] }],
     };
 
     let client = reqwest::Client::builder()
@@ -115,10 +117,16 @@ pub async fn chat_with_twin(
         })?;
 
     tracing::info!("Enviando request a Gemini API...");
-    let res = client.post(&url).json(&req_body).send().await.map_err(|e| {
-        tracing::error!("Fallo en request a Gemini: {}", e);
-        (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "AI request failed".to_string())
-    })?;
+    let res = client
+        .post(url)
+        .header("x-goog-api-key", gemini_key)
+        .json(&req_body)
+        .send()
+        .await
+        .map_err(|e| {
+            tracing::error!("Fallo en request a Gemini: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "AI request failed".to_string())
+        })?;
     tracing::info!("Gemini API respondió con status: {}", res.status());
 
     if !res.status().is_success() {

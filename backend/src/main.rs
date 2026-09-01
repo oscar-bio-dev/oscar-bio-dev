@@ -95,57 +95,50 @@ use rustls::server::WebPkiClientVerifier;
 use rustls::RootCertStore;
 use rustls::ServerConfig;
 
-fn build_tls_configs() -> (RustlsConfig, RustlsConfig) {
+fn build_tls_configs() -> Result<(RustlsConfig, RustlsConfig), Box<dyn std::error::Error>> {
     let mut root_store = RootCertStore::empty();
-    let ca_file = std::fs::File::open("certs/ca.crt").expect("No se encontró certs/ca.crt");
+    let ca_file = std::fs::File::open("certs/ca.crt")?;
     let mut ca_reader = std::io::BufReader::new(ca_file);
     let certs = rustls_pemfile::certs(&mut ca_reader).filter_map(Result::ok);
     for cert in certs {
-        root_store.add(cert).unwrap();
+        root_store.add(cert)?;
     }
 
-    let strict_client_auth = WebPkiClientVerifier::builder(root_store.into()).build().unwrap();
+    let strict_client_auth = WebPkiClientVerifier::builder(root_store.into()).build()?;
 
-    let cert_file =
-        std::fs::File::open("certs/server.crt").expect("No se encontró certs/server.crt");
+    let cert_file = std::fs::File::open("certs/server.crt")?;
     let mut cert_reader = std::io::BufReader::new(cert_file);
     let cert_chain: Vec<_> =
         rustls_pemfile::certs(&mut cert_reader).filter_map(Result::ok).collect();
 
-    let key_file =
-        std::fs::File::open("certs/server.key").expect("No se encontró certs/server.key");
+    let key_file = std::fs::File::open("certs/server.key")?;
     let mut key_reader = std::io::BufReader::new(key_file);
-    let key = rustls_pemfile::private_key(&mut key_reader)
-        .expect("No se pudo leer la llave")
-        .expect("No key found");
+    let key = rustls_pemfile::private_key(&mut key_reader)?.ok_or("No key found in server.key")?;
 
     let mut strict_server_config = ServerConfig::builder()
         .with_client_cert_verifier(strict_client_auth)
-        .with_single_cert(cert_chain.clone(), key.clone_key())
-        .expect("Mala configuración mTLS");
+        .with_single_cert(cert_chain.clone(), key.clone_key())?;
 
-    let mut public_server_config = ServerConfig::builder()
-        .with_no_client_auth()
-        .with_single_cert(cert_chain, key)
-        .expect("Mala configuración TLS público");
+    let mut public_server_config =
+        ServerConfig::builder().with_no_client_auth().with_single_cert(cert_chain, key)?;
 
     strict_server_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
     public_server_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
 
-    (
+    Ok((
         RustlsConfig::from_config(Arc::new(public_server_config)),
         RustlsConfig::from_config(Arc::new(strict_server_config)),
-    )
+    ))
 }
 
 async fn shutdown_signal() {
-    tokio::signal::ctrl_c().await.expect("Failed to install CTRL+C signal handler");
+    let _ = tokio::signal::ctrl_c().await;
     tracing::info!("Received Ctrl-C, shutting down gracefully...");
 }
 
 #[tokio::main]
 #[allow(clippy::too_many_lines)]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _ = rustls::crypto::ring::default_provider().install_default();
 
     // Cargar variables de entorno
@@ -157,11 +150,11 @@ async fn main() {
         .init();
 
     // Inicializar Pool de Base de Datos
-    let db_pool = init_db_pool().await.expect("Fallo al conectar a TimescaleDB");
+    let db_pool = init_db_pool().await?;
 
     // Ejecutar migraciones automáticamente
     tracing::info!("Verificando migraciones SQL...");
-    sqlx::migrate!("./migrations").run(&db_pool).await.expect("Fallo al migrar la DB");
+    sqlx::migrate!("./migrations").run(&db_pool).await?;
 
     // Inicializar canales de buffer asíncrono y streaming WebSockets
     let (tx_db, rx_db) = tokio::sync::mpsc::channel(10_000);
@@ -174,8 +167,13 @@ async fn main() {
     let app_state = AppState::new(db_pool, tx_db, tx_ws);
 
     // Configurar rate limiting para la API pública (ej. 2 requests por segundo, burst de 10)
-    let governor_conf =
-        Arc::new(GovernorConfigBuilder::default().per_second(2).burst_size(10).finish().unwrap());
+    let governor_conf = Arc::new(
+        GovernorConfigBuilder::default()
+            .per_second(2)
+            .burst_size(10)
+            .finish()
+            .ok_or("Invalid governor config")?,
+    );
 
     // Chat API stricter rate limiting: ~5 requests per minute
     let chat_governor_conf = Arc::new(
@@ -183,11 +181,11 @@ async fn main() {
             .per_second(12) // 1 request every 12 seconds = 5 req/min
             .burst_size(2)
             .finish()
-            .unwrap(),
+            .ok_or("Invalid chat governor config")?,
     );
 
     let cors_layer = CorsLayer::new()
-        .allow_origin("https://oscar-bio.dev".parse::<axum::http::HeaderValue>().unwrap())
+        .allow_origin("https://oscar-bio.dev".parse::<axum::http::HeaderValue>()?)
         .allow_methods([Method::GET, Method::POST])
         .allow_headers(Any);
 
@@ -253,14 +251,12 @@ async fn main() {
     }
 
     let public_addr = format!("{host}:{port}");
-    let public_socket: std::net::SocketAddr =
-        public_addr.parse().expect("Formato de HOST IP inválido");
+    let public_socket: std::net::SocketAddr = public_addr.parse()?;
 
     let strict_addr = format!("{host}:8443");
-    let strict_socket: std::net::SocketAddr =
-        strict_addr.parse().expect("Formato de HOST IP inválido");
+    let strict_socket: std::net::SocketAddr = strict_addr.parse()?;
 
-    let (public_tls, strict_tls) = build_tls_configs();
+    let (public_tls, strict_tls) = build_tls_configs()?;
 
     tracing::info!("Servidor web público (sin client auth) en https://{}", public_addr);
     tracing::info!("Servidor IoT mTLS estricto en https://{}", strict_addr);
@@ -281,6 +277,8 @@ async fn main() {
         .serve(strict_app.into_make_service_with_connect_info::<std::net::SocketAddr>());
 
     let (res_pub, res_strict) = tokio::join!(public_server, strict_server);
-    res_pub.unwrap();
-    res_strict.unwrap();
+    res_pub?;
+    res_strict?;
+
+    Ok(())
 }

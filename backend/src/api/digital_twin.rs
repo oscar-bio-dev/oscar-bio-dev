@@ -16,7 +16,8 @@ use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 pub async fn get_digital_twin(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let state_map = state.digital_twin.read().await.clone();
+    let state_map: std::collections::HashMap<String, shared::TelemetryPayload> =
+        state.digital_twin.read().await.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
 
     Ok(Json(state_map))
 }

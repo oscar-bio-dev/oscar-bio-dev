@@ -48,8 +48,9 @@ pub fn start_db_worker(db_pool: PgPool, mut rx: mpsc::Receiver<TelemetryPayload>
                         attempts += 1;
                         if attempts >= 5 {
                             tracing::error!(
-                                "DB Worker falló al insertar telemetría de {} tras 5 intentos: {}",
+                                "CRITICAL: DB Worker falló al insertar telemetría tras 5 intentos. Datos descartados permanentemente. Device: {}, Payload: {:?}, Error: {}",
                                 payload.device_id,
+                                payload,
                                 e
                             );
                             break;
@@ -60,6 +61,9 @@ pub fn start_db_worker(db_pool: PgPool, mut rx: mpsc::Receiver<TelemetryPayload>
                         );
                         tokio::time::sleep(delay).await;
                         delay *= 2; // Exponential backoff
+                        if delay > tokio::time::Duration::from_secs(8) {
+                            delay = tokio::time::Duration::from_secs(8);
+                        }
                     }
                 }
             }

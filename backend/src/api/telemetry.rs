@@ -35,7 +35,7 @@ pub async fn ingest_telemetry(
     // 2. Actualizamos el Gemelo Digital en RAM
     {
         let mut twin = state.digital_twin.write().await;
-        twin.insert(payload.device_id.clone(), payload.clone());
+        twin.put(payload.device_id.clone(), payload.clone());
     }
 
     // 3. Persistencia Asíncrona (Buffer) y Streaming (WebSockets)
@@ -105,7 +105,7 @@ pub async fn ingest_telemetry_protobuf(
     // 3. Actualizamos el Gemelo Digital en RAM
     {
         let mut twin = state.digital_twin.write().await;
-        twin.insert(payload.device_id.clone(), payload.clone());
+        twin.put(payload.device_id.clone(), payload.clone());
     }
 
     // 4. Persistencia Asíncrona (Buffer) y Streaming (WebSockets)

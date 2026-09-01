@@ -6,9 +6,10 @@
 
 //! Memoria compartida del servidor (Gemelo Digital).
 
+use lru::LruCache;
 use shared::TelemetryPayload;
 use sqlx::PgPool;
-use std::collections::HashMap;
+use std::num::NonZeroUsize;
 use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, RwLock};
 
@@ -17,7 +18,8 @@ use tokio::sync::{broadcast, mpsc, RwLock};
 pub struct AppState {
     /// Buffer en RAM de las últimas lecturas de telemetría de cada sensor.
     /// Funciona como el gemelo digital en tiempo real de la flota física.
-    pub digital_twin: Arc<RwLock<HashMap<String, TelemetryPayload>>>,
+    /// Limitado a 10,000 entradas para evitar `DoS` por agotamiento de RAM.
+    pub digital_twin: Arc<RwLock<LruCache<String, TelemetryPayload>>>,
     /// Pool de conexiones a la base de datos (`TimescaleDB`).
     pub db_pool: PgPool,
     /// Cola mpsc para escritura en base de datos asíncrona.
@@ -34,6 +36,11 @@ impl AppState {
         tx_db: mpsc::Sender<TelemetryPayload>,
         tx_ws: broadcast::Sender<TelemetryPayload>,
     ) -> Self {
-        Self { digital_twin: Arc::new(RwLock::new(HashMap::new())), db_pool, tx_db, tx_ws }
+        Self {
+            digital_twin: Arc::new(RwLock::new(LruCache::new(NonZeroUsize::new(10_000).unwrap()))),
+            db_pool,
+            tx_db,
+            tx_ws,
+        }
     }
 }
