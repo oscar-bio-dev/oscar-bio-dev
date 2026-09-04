@@ -11,6 +11,7 @@ debug/
 .env
 .env.local
 .env.*
+!.env.example
 
 # IDEs and Editors
 .vscode/
@@ -31,5 +32,11 @@ Thumbs.db
 # Cryptography and mTLS
 certs/
 
-# WebAssembly
+# WebAssembly build output
 frontend/dist/
+
+# Agent workspace (Antigravity IDE)
+.agents/
+
+# Firebase cache
+.firebase/

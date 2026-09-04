@@ -5,13 +5,10 @@
 # Compiled artifacts and build directories
 target/
 frontend/dist/
-**/*.wasm
-**/*.js
 
 # Secrets and Environment
 .env
 .env.local
-.env.*
 
 # IDEs and OS files
 .vscode/
@@ -20,11 +17,17 @@ frontend/dist/
 *.swp
 *.swo
 
-# Misc
+# Agent workspace
+.agents/
+
+# Firebase cache
+.firebase/
+
+# Documentation (not needed in container)
 docs/
 README.md
 CHANGELOG.md
 CONTRIBUTING.md
-ROADMAP.md
+LICENSE.txt
 *.pdf
 *.png

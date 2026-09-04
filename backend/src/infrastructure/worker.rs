@@ -20,19 +20,29 @@ pub fn start_db_worker(db_pool: PgPool, mut rx: mpsc::Receiver<TelemetryPayload>
             loop {
                 let query_result = sqlx::query(
                     r"
-                    INSERT INTO telemetry (device_id, timestamp, temperature, humidity, ph, dissolved_oxygen, pressure, gas_resistance, co2)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                    INSERT INTO telemetry (
+                        device_id, timestamp, temperature, humidity, ph, dissolved_oxygen,
+                        pressure, gas_resistance, co2, iaq, pm1_0, pm2_5, pm10_0,
+                        battery_mv, sleep_cycles
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                     ",
                 )
                 .bind(&payload.device_id)
                 .bind(payload.timestamp)
-                .bind(payload.temperature.value())
+                .bind(payload.temperature.map(shared::Temperature::value))
                 .bind(payload.humidity.map(shared::Humidity::value))
                 .bind(payload.ph.map(shared::Ph::value))
                 .bind(payload.dissolved_oxygen.map(shared::DissolvedOxygen::value))
                 .bind(payload.pressure.map(shared::Pressure::value))
                 .bind(payload.gas_resistance.map(shared::GasResistance::value))
                 .bind(payload.co2.map(shared::Co2::value))
+                .bind(payload.iaq.map(shared::Iaq::value))
+                .bind(payload.pm1_0.map(shared::Pm1_0::value))
+                .bind(payload.pm2_5.map(shared::Pm2_5::value))
+                .bind(payload.pm10_0.map(shared::Pm10_0::value))
+                .bind(payload.battery_mv.map(|v| i32::try_from(v).unwrap_or(i32::MAX)))
+                .bind(payload.sleep_cycles.map(|v| i32::try_from(v).unwrap_or(i32::MAX)))
                 .execute(&db_pool)
                 .await;
 

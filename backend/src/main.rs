@@ -36,7 +36,9 @@ use utoipa_swagger_ui::SwaggerUi;
         backend::api::digital_twin::get_digital_twin,
         backend::api::telemetry::ingest_telemetry,
         backend::api::telemetry::ingest_telemetry_protobuf,
-        backend::api::chat::chat_with_twin
+        backend::api::chat::chat_with_twin,
+        backend::api::gateway_health::ingest_gateway_health,
+        backend::api::gateway_health::ingest_gateway_health_protobuf
     ),
     components(
         schemas(
@@ -48,10 +50,18 @@ use utoipa_swagger_ui::SwaggerUi;
             shared::Pressure,
             shared::GasResistance,
             shared::Co2,
+            shared::Iaq,
+            shared::Pm1_0,
+            shared::Pm2_5,
+            shared::Pm10_0,
+            shared::GatewayHealthEvent,
             backend::api::chat::ChatRequest,
             backend::api::chat::ChatResponse
         )
-    ),tags((name = "telemetry", description = "Endpoints para sensores ambientales")),
+    ),tags(
+        (name = "telemetry", description = "Endpoints para sensores ambientales"),
+        (name = "diagnostics", description = "Eventos de salud del Edge Gateway")
+    ),
     modifiers(&SecurityAddon)
 )]
 struct ApiDoc;
@@ -228,6 +238,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route(
             "/api/telemetry/protobuf",
             axum::routing::post(backend::api::telemetry::ingest_telemetry_protobuf),
+        )
+        .route(
+            "/api/gateway-health",
+            axum::routing::post(backend::api::gateway_health::ingest_gateway_health),
+        )
+        .route(
+            "/api/gateway-health/protobuf",
+            axum::routing::post(backend::api::gateway_health::ingest_gateway_health_protobuf),
         )
         .layer(
             tower::ServiceBuilder::new()

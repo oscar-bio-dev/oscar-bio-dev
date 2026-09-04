@@ -2,23 +2,34 @@ syntax = "proto3";
 
 package telemetry;
 
-// The single source of truth for the edge-to-cloud payload.
-// Shared between the ESP-IDF (C++) firmware and the Rust backend.
-message TelemetryPayloadPb {
-    // Unique identifier for the hardware node
-    string device_id = 1;
-    
-    // Unix epoch timestamp in milliseconds (UTC)
-    int64 timestamp_epoch_ms = 2;
-    
-    // Water/Soil metrics
-    double temperature = 3; // Celsius
-    optional double humidity = 4; // % Relative Humidity
-    optional double ph = 5; // 0.0 - 14.0
-    optional double dissolved_oxygen = 6; // mg/L
-    
-    // Air Quality metrics (BME688/SCD41)
-    optional double pressure = 7; // hPa
-    optional double gas_resistance = 8; // Ohms (VOCs)
-    optional double co2 = 9; // ppm
+// El "Mega-Esquema" canónico (Single Source of Truth)
+// Alineado con: edge-telemetry-gateway/shared_components/proto/telemetry.proto
+// Todos los campos son opcionales para evitar overhead en el aire.
+message TelemetryPayload {
+    // Identity & Meta (Inyectado por P4 Gateway antes de subir a la nube)
+    string device_id = 1;         // string format "sensor-XX:XX:XX:XX:XX:XX"
+
+    // Timestamp (Inyectado por Nodo o Gateway)
+    uint64 timestamp_ms = 2;      // UTC Epoch en ms
+
+    // Ambiental y Calidad de Aire (BME688 / SCD41)
+    optional float temperature = 3;      // Celsius
+    optional float humidity = 4;         // % RH
+    optional float pressure = 5;         // hPa
+    optional float gas_resistance = 6;   // Ohms (VOCs)
+    optional float iaq = 7;              // Index of Air Quality
+    optional uint32 co2 = 8;             // ppm
+
+    // Partículas (BMV080)
+    optional float pm1_0 = 9;            // ug/m3
+    optional float pm2_5 = 10;           // ug/m3
+    optional float pm10_0 = 11;          // ug/m3
+
+    // Agua y Suelo (Futuro)
+    optional float ph = 12;              // 0.0 - 14.0
+    optional float dissolved_oxygen = 13;// mg/L
+
+    // Diagnósticos del Nodo
+    optional uint32 battery_mv = 14;     // Millivolts
+    optional uint32 sleep_cycles = 15;   // Hardware wake count
 }

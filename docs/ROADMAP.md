@@ -38,22 +38,24 @@ To ensure relentless quality and comply with industrial standards, the platform'
 - [x] **Database Layer:** Asynchronous `sqlx` with compile-time query verification.
 - [x] **Geospatial/Temporal Storage:** Preparation for PostgreSQL with **PostGIS** and **TimescaleDB** extensions (ideal for environmental time-series modeling and retention).
 - [x] **Infrastructure as Code (IaC):** Deterministic spin-up and orchestration of the database using `docker-compose` (local) and Terraform/Nix (for production deployments).
-- [x] **Fault Tolerance and Retention:** Implementation of a data retention buffer (message queues like Tokio async channels or Redis) to avoid losing critical burst data during database saturation or crashes.
+- [x] **Fault Tolerance and Retention:** Implementation of a data retention buffer (Tokio `mpsc` async channels) with exponential backoff (capped at 8s, 5 retries) and critical logging on data loss.
 - [x] **Robust IoT Ingestion:** Ultra-fast deserialization (`serde`) and strict payload validation (`validator`) before touching the database.
-- [x] **Bidirectional Protocols:** Implementation of WebSockets or an HTTP-to-MQTT bridge for remote control and *Over-The-Air* (OTA) configuration of biosensors.
+- [x] **Bidirectional Protocols:** WebSocket streaming for real-time telemetry broadcast to frontend clients. OTA downlink deferred until mTLS auth layer is complete.
 
 ### 🟣 Phase 5: Edge & Cloud AI Synergy (Cognitive Digital Twin)
 - [ ] **Edge Inference Engine (TinyML):** Integration of Machine Learning models (exported via Edge Impulse) directly into Rust/C++ firmware using `tract` or `ort`.
 - [ ] **Real-Time Edge Classification:** Microcontroller-level (ESP32, STM32, Microchip Technology, Texas Instruments) analysis of water/soil quality data for ultra-low latency anomaly detection and alerts.
-- [x] **Digital Twin Architecture:** In-memory virtual representation of the current state of all deployed hardware nodes.
-- [x] **Generative AI Hub Interface:** Integration of the Gemini LLM via Rust Axum backend to act as a conversational expert system (EcoTech), dynamically analyzing real-time telemetry and Digital Twin states to provide natural language insights.
+- [x] **Digital Twin Architecture:** In-memory virtual representation (`LruCache`, 10K cap) of the current state of all deployed hardware nodes.
+- [x] **Generative AI Hub Interface:** Integration of the Gemini LLM via Rust Axum backend using `system_instruction` schema for prompt injection protection. Dynamic real-time telemetry reasoning.
 - [x] **Agent Terminal UI:** A minimalist terminal web component, acting as the frontend interface to query the Cognitive Digital Twin.
 
 ### ⚫ Phase 6: Space Grade (Orbital & Wasm)
-- [x] **Reactive Wasm Frontend:** Interactive graphical interface (dashboard) compiled to **WebAssembly** (e.g., Leptos or Dioxus), eliminating external JS frameworks.
+- [x] **Reactive Wasm Frontend:** Interactive graphical interface (dashboard) compiled to **WebAssembly** (Leptos), eliminating external JS frameworks.
 - [x] **Trunk/Leptos CSR:** Transition of the user interface to Leptos (Wasm) for reactive visualization of high-frequency data without JS overhead.
-- [x] **Distroless Containerization:** Creation of ultra-lightweight Docker images (`scratch` or `distroless`, < 15MB) shielded against OS-level vulnerabilities.
+- [x] **Distroless Containerization:** Creation of ultra-lightweight Docker images (`scratch`, < 15MB) shielded against OS-level vulnerabilities.
 - [x] **Hardware Security (mTLS):** Mutual TLS authentication using `rustls` to ensure that only sensors with valid cryptographic certificates can publish data.
+- [x] **Mega-Schema Convergence:** Unified 15-field Protobuf schema aligned 1:1 between edge firmware (C/Nanopb) and backend (Rust/prost), covering environmental, particulate, aquatic, and node diagnostic data.
+- [x] **Gateway Health Diagnostics:** Dedicated ingestion pipeline and TimescaleDB hypertable for edge gateway health events (SD card status, heap monitoring, uptime, degradation alerts).
 
 ---
 
@@ -62,24 +64,32 @@ To ensure relentless quality and comply with industrial standards, the platform'
 This repository is configured with the strictest rules. To contribute or spin up the project:
 
 1. **Required tools:** Rust (via `rustup`), Docker (for TimescaleDB), and Trunk (`cargo install trunk`).
-2. **Start the Spatial-Temporal Database:**
+2. **Configure environment:**
+   ```bash
+   cp .env.example .env   # Fill in your GEMINI_API_KEY and DATABASE_URL
+   ```
+3. **Start the Spatial-Temporal Database:**
    ```bash
    docker-compose up -d
    ```
-3. **Build the Wasm Frontend:**
+4. **Build the Wasm Frontend:**
    ```bash
    cd frontend && trunk build
    cd ..
    ```
-4. **Run the Axum Server:**
+5. **Run the Axum Server:**
    ```bash
    cargo run -p backend
    ```
-3. **Mandatory static analysis (Linting):**
+6. **Mandatory static analysis (Linting):**
    ```bash
    cargo clippy --workspace --all-targets --all-features -- -D warnings
    ```
-4. **Code Formatting:**
+7. **Code Formatting:**
    ```bash
    cargo fmt --all -- --check
+   ```
+8. **Run Tests:**
+   ```bash
+   cargo test --workspace
    ```

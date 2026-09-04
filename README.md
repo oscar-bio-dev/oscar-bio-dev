@@ -21,39 +21,59 @@ This repository is more than a profile; it hosts my live, industrial-grade **Eco
 ```mermaid
 graph TD
     subgraph Edge Hardware
-        A[ESP32 / RP2350 Sensor Nodes] -->|Protobuf over HTTP/MQTT| B
+        A[ESP32 / RP2350 Sensor Nodes] -->|ESP-NOW Protobuf| GW[ESP32-P4 Gateway]
+        GW -->|"HTTPS + JWT (ES256)"| PS[GCP Pub/Sub]
     end
 
-    subgraph Rust Backend Core
-        B(Axum Web Server) --> C{Payload Validator}
-        C -->|Type-Safe| D[In-Memory Digital Twin]
-        C -->|Async Insert| E[(TimescaleDB + PostGIS)]
-        
-        D <-->|State Context| F(Gemini 2.5 AI Agent)
+    subgraph "Rust Backend Core (Axum)"
+        B_PUB[":3000 Public Port"] -->|REST / WS| DT[In-Memory Digital Twin]
+        B_MTLS[":8443 mTLS Strict Port"] --> V{Payload Validator}
+        V -->|Type-Safe| DT
+        V -->|"Async mpsc"| W[DB Worker]
+        W -->|Batch Insert| DB[(TimescaleDB + PostGIS)]
+        DT <-->|State Context| AI(Gemini AI Agent)
+        B_MTLS -->|Health Events| GH[Gateway Health Persister]
+        GH --> DB
     end
 
     subgraph Frontend Interface
-        G[Leptos Wasm SPA] -->|REST API / WebSockets| B
-        G -->|API Key Auth| F
+        F[Leptos Wasm SPA] -->|REST / WebSockets| B_PUB
     end
 
     classDef hardware fill:#495057,stroke:#ced4da,stroke-width:2px,color:#fff;
     classDef rust fill:#e76f51,stroke:#f4a261,stroke-width:2px,color:#fff;
     classDef ai fill:#2a9d8f,stroke:#264653,stroke-width:2px,color:#fff;
+    classDef db fill:#316192,stroke:#264653,stroke-width:2px,color:#fff;
 
-    class A hardware;
-    class B,C,D rust;
-    class F ai;
+    class A,GW hardware;
+    class B_PUB,B_MTLS,V,W,GH rust;
+    class AI ai;
+    class DB db;
 ```
 
 ### Key Features
-- **Zero-Cost Binary Pipelines**: Uses `prost` (Protobuf) for ultra-fast, zero-allocation telemetry deserialization.
-- **Hardware Security (mTLS)**: Mutual TLS authentication to ensure that only physical nodes with valid cryptographic certificates can publish data to the `Axum` backend.
-- **Dual-Port Edge/Cloud Routing**: Segregation of traffic where Port 3000 serves the public UI and Chatbot (rate-limited), while Port 8443 exclusively handles mTLS IoT sensor ingestion.
-- **Cognitive Digital Twin**: An in-memory, thread-safe state representation (`Arc<RwLock<HashMap>>`) of all physical nodes.
-- **EcoTech Agent Integration**: Direct integration with Gemini Flash Lite (`reqwest`), giving the system an expert conversational interface with real-time reasoning over environmental hardware data.
-- **WebAssembly (Wasm) Dashboard**: A custom-built, hacker-styled Single Page Application using **Leptos**, avoiding JS bloat and offering native Rust performance in the browser.
+
+- **Unified Mega-Schema (15 fields)**: A single Protobuf contract shared between edge firmware (C/Nanopb) and backend (Rust/prost), covering environmental, particulate, aquatic, and node diagnostics data.
+- **Zero-Cost Binary Pipelines**: Uses `prost` (Protobuf) with hybrid `f32` (wire DTO) → `f64` (domain/DB) architecture for lossless telemetry deserialization.
+- **Hardware Security (mTLS)**: Mutual TLS authentication via `rustls` to ensure that only physical nodes with valid cryptographic certificates can publish data.
+- **Dual-Port Edge/Cloud Routing**: Port `:3000` serves the public UI, Chatbot, and WebSocket streaming (rate-limited). Port `:8443` exclusively handles mTLS IoT sensor and gateway health ingestion.
+- **Cognitive Digital Twin**: An in-memory, thread-safe state representation (`Arc<RwLock<LruCache>>`, capped at 10,000 devices) of all physical nodes.
+- **Gateway Health Diagnostics**: Dedicated ingestion pipeline for edge gateway health events (SD card status, heap monitoring, degradation alerts).
+- **EcoTech AI Agent**: Direct integration with Gemini Flash Lite via `system_instruction` schema, with prompt injection protection and real-time reasoning over environmental data.
+- **WebAssembly (Wasm) Dashboard**: A custom-built, Gruvbox-styled SPA using **Leptos**, avoiding JS bloat and rendering 12+ sensor metrics per node.
 - **Spatial-Temporal Database**: Pre-configured `docker-compose` stack with **PostgreSQL + PostGIS + TimescaleDB**.
+
+### Telemetry Schema
+
+The backend supports the following sensor data from the unified Mega-Schema:
+
+| Category | Fields | Sensors |
+|---|---|---|
+| Environmental | `temperature`, `humidity`, `pressure`, `gas_resistance`, `iaq` | BME688, SCD41 |
+| Particulate | `pm1_0`, `pm2_5`, `pm10_0` | BMV080 |
+| Aquatic/Soil | `ph`, `dissolved_oxygen` | Future probes |
+| Air Quality | `co2` | SCD41 |
+| Node Diagnostics | `battery_mv`, `sleep_cycles` | ESP32 ADC / RTC |
 
 ---
 
@@ -66,7 +86,7 @@ graph TD
 ---
 
 ## 🛠️ Contributing & Roadmap
-We follow strict engineering standards (0 warnings on `clippy`, secure `cargo audit` gates, and Type-Driven Design). 
+We follow strict engineering standards (0 warnings on `clippy`, secure `cargo audit` gates, and Type-Driven Design).
 - 👉 **[Dive into the Engineering Roadmap here](docs/ROADMAP.md)**
 - 👉 **[See Contributing Guidelines](CONTRIBUTING.md)**
 - 👉 **[Check the Changelog](CHANGELOG.md)**

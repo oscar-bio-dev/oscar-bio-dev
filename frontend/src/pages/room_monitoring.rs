@@ -47,13 +47,18 @@ pub fn RoomMonitoring() -> impl IntoView {
                             <span class="filename">{payload.device_id.clone()} ".log"</span>
                         </div>
                         <div class="card-body">
-                            <p style="color: var(--accent-yellow);">"Temperature: " {format!("{:.1}", payload.temperature.value())} " °C"</p>
+                            {payload.temperature.map(|t| view! { <p style="color: var(--accent-yellow);">"Temperature: " {format!("{:.1}", t.value())} " °C"</p> })}
                             {payload.humidity.map(|h| view! { <p style="color: var(--accent-blue);">"Humidity: " {format!("{:.1}", h.value())} " %"</p> })}
-                            {payload.ph.map(|ph| view! { <p style="color: var(--accent-green);">"pH: " {format!("{:.2}", ph.value())}</p> })}
-                            {payload.dissolved_oxygen.map(|do_val| view! { <p style="color: var(--fg-main);">"DO: " {format!("{:.2}", do_val.value())} " mg/L"</p> })}
+                            {payload.iaq.map(|iaq| view! { <p style="color: var(--accent-green);">"IAQ: " {format!("{:.0}", iaq.value())}</p> })}
+                            {payload.co2.map(|c| view! { <p style="color: var(--accent-red);">"CO2: " {format!("{:.0}", c.value())} " ppm"</p> })}
+                            {payload.pm2_5.map(|pm| view! { <p style="color: var(--accent-yellow);">"PM2.5: " {format!("{:.1}", pm.value())} " µg/m³"</p> })}
+                            {payload.pm10_0.map(|pm| view! { <p style="color: var(--fg-main);">"PM10: " {format!("{:.1}", pm.value())} " µg/m³"</p> })}
                             {payload.pressure.map(|p| view! { <p style="color: var(--accent-yellow);">"Pressure: " {format!("{:.1}", p.value())} " hPa"</p> })}
                             {payload.gas_resistance.map(|g| view! { <p style="color: var(--accent-blue);">"Gas Res: " {g.value()} " Ohms"</p> })}
-                            {payload.co2.map(|c| view! { <p style="color: var(--accent-red);">"CO2: " {c.value()} " ppm"</p> })}
+                            {payload.ph.map(|ph| view! { <p style="color: var(--accent-green);">"pH: " {format!("{:.2}", ph.value())}</p> })}
+                            {payload.dissolved_oxygen.map(|do_val| view! { <p style="color: var(--fg-main);">"DO: " {format!("{:.2}", do_val.value())} " mg/L"</p> })}
+                            {payload.battery_mv.map(|mv| view! { <p style="color: var(--accent-blue);">"Battery: " {mv} " mV"</p> })}
+                            {payload.sleep_cycles.map(|sc| view! { <p style="color: var(--fg-dim);">"Sleep Cycles: " {sc}</p> })}
                         </div>
                     </section>
                 }).collect_view()}

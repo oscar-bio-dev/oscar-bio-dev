@@ -54,9 +54,9 @@ pub async fn ingest_telemetry(
     }
 
     tracing::info!(
-        "Recibida telemetría HTTP desde {}: Temp = {}°C (Encolada)",
+        "Recibida telemetría HTTP desde {}: Temp = {:?} (Encolada)",
         payload.device_id,
-        payload.temperature.value()
+        payload.temperature.map(shared::Temperature::value)
     );
 
     Ok((StatusCode::ACCEPTED, "Telemetría encolada correctamente"))
@@ -124,9 +124,9 @@ pub async fn ingest_telemetry_protobuf(
     }
 
     tracing::info!(
-        "Recibida telemetría PROTOBUF desde {}: Temp = {}°C (Encolada)",
+        "Recibida telemetría PROTOBUF desde {}: Temp = {:?} (Encolada)",
         payload.device_id,
-        payload.temperature.value()
+        payload.temperature.map(shared::Temperature::value)
     );
 
     Ok((StatusCode::ACCEPTED, "Telemetría Protobuf encolada correctamente"))

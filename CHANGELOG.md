@@ -7,8 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-04
+
 ### Added
-- **Phase 6 (Space Grade) Preparations**: Roadmap finalized for distroless Wasm deployments.
+- **Mega-Schema Convergence**: Backend Protobuf schema and domain models now aligned 1:1 with the canonical Gateway `TelemetryPayload` (15 fields).
+- **New newtypes**: `Iaq` (0-500), `Pm1_0`, `Pm2_5`, `Pm10_0` (0-1000 µg/m³) with full domain validation.
+- **Node diagnostics**: `battery_mv` and `sleep_cycles` fields propagated end-to-end from proto → Rust model → TimescaleDB.
+- **Gateway Health Infrastructure (Contract-First)**:
+  - New `gateway_health_events` TimescaleDB hypertable (migration `0004`).
+  - New `GatewayHealthEvent` + `GatewayHealthEventPb` domain models.
+  - New `POST /api/gateway-health` and `POST /api/gateway-health/protobuf` endpoints on mTLS strict port.
+- **OpenAPI**: Registered `Iaq`, `Pm1_0`, `Pm2_5`, `Pm10_0`, `GatewayHealthEvent` schemas in Swagger UI.
+- **Frontend**: Leptos Wasm dashboard now renders 12 sensor fields per node (IAQ, PM2.5, PM10, battery, sleep cycles, etc.).
+- **SQL Migration `0003`**: Adds `iaq`, `pm1_0`, `pm2_5`, `pm10_0`, `battery_mv`, `sleep_cycles` columns to `telemetry` table.
+
+### Changed
+- **Hybrid f32/f64 Architecture**: Protobuf DTO uses `f32` (hardware wire type) with explicit `f64::from()` widening for domain model and DB persistence.
+- **Temperature relaxed**: `temperature` field changed from required to `Option<Temperature>` to support heterogeneous sensor nodes.
+- **DB Worker**: INSERT query expanded from 9 to 15 column binds with safe `u32→i32` conversion.
+- **Device ID regex**: Extended to accept `:` and `.` characters for MAC-format IDs (`sensor-AA:BB:CC:DD:EE:FF`).
+
+## [0.5.0] - 2026-09-01
+
+### Added
+- **Phase 3 Security Hardening**:
+  - `LruCache` (cap 10,000) replaces unbounded `HashMap` for Digital Twin state to prevent `DoS` via RAM exhaustion.
+  - Gemini API key moved from query param to `x-goog-api-key` HTTP header.
+  - `system_instruction` schema for Gemini API to prevent prompt injection.
+  - User message truncation to 2,000 characters.
+  - DB Worker exponential backoff capped at 8 seconds with critical log on 5th failure.
+  - WebSocket set to read-only mode (OTA command stub removed until mTLS auth layer is ready).
+
+### Changed
+- Startup error handling refactored from `.unwrap()`/`.expect()` to `Result<>` propagation in `main.rs`.
+
+### Removed
+- `backend/assets/chatbot.js` and `backend/assets/style.css` (legacy, contained hardcoded credentials).
 
 ## [0.4.5] - 2026-08-30
 

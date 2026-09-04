@@ -1,7 +1,7 @@
-# Builder stage for Frontend and Backend
+# ── Stage 1: Builder (Frontend Wasm + Backend Musl) ──────────────────────────
 FROM rust:1.80-alpine AS builder
 
-# Install build dependencies, musl-tools, and Node.js (if needed for any JS tooling, but Trunk handles wasm)
+# Install build dependencies for musl static linking and OpenSSL
 RUN apk add --no-cache musl-dev pkgconfig openssl-dev perl make
 
 # Add Wasm target for Leptos frontend
@@ -16,32 +16,34 @@ COPY . .
 
 # Build the Frontend (Wasm)
 WORKDIR /app/frontend
-# Note: Since the backend serves `../frontend/dist`, we need to make sure the paths match in the final container.
-# We will copy the `dist` folder to `/app/frontend/dist` in the final container.
 RUN trunk build --release
 
 # Build the Backend (Musl static binary)
 WORKDIR /app
 RUN cargo build --bin backend --release --target x86_64-unknown-linux-musl
 
-# Final Stage: Scratch (Zero-OS footprint)
+# ── Stage 2: Scratch (Zero-OS footprint, < 15MB) ────────────────────────────
 FROM scratch
 
-# Set working directory
 WORKDIR /app
 
-# The backend expects the frontend dist folder at ../frontend/dist relative to its execution path.
-# If we run the binary from /app/backend, we need the dist at /app/frontend/dist.
-# So we'll put the binary at /app/backend/server and execute it from /app/backend.
+# Copy the statically-linked backend binary
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/backend /app/backend/server
+
+# Copy the frontend dist (served by the backend via ServeDir)
 COPY --from=builder /app/frontend/dist /app/frontend/dist
+
+# Copy TLS certificates for mTLS (provided at deploy time)
 COPY --from=builder /app/certs /app/backend/certs
 
-# Expose the default ports
+# Copy SQL migrations (auto-applied on startup via sqlx::migrate!)
+COPY --from=builder /app/backend/migrations /app/backend/migrations
+
+# Expose dual ports: Public (:3000) and mTLS Strict (:8443)
 EXPOSE 3000
 EXPOSE 8443
 
-# Set environment variables
+# Environment defaults (override via docker run -e or Cloud Run)
 ENV PORT=3000
 ENV APP_HOST=0.0.0.0
 

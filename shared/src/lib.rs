@@ -19,9 +19,19 @@ pub enum TelemetryError {
     Pressure(f64),
     #[error("Gas Resistance value {0} is out of valid range")]
     GasResistance(f64),
-    #[error("CO2 value {0} is out of valid range (400.0 - 40000.0 ppm)")]
+    #[error("CO2 value {0} is out of valid range (0.0 - 40000.0 ppm)")]
     Co2(f64),
+    #[error("IAQ value {0} is out of valid range (0.0 - 500.0)")]
+    Iaq(f64),
+    #[error("PM1.0 value {0} is out of valid range (0.0 - 1000.0 µg/m³)")]
+    Pm1_0(f64),
+    #[error("PM2.5 value {0} is out of valid range (0.0 - 1000.0 µg/m³)")]
+    Pm2_5(f64),
+    #[error("PM10.0 value {0} is out of valid range (0.0 - 1000.0 µg/m³)")]
+    Pm10_0(f64),
 }
+
+// ─── Newtypes with domain validation ────────────────────────────────────────
 
 /// Representa el pH del agua o suelo. Garantizado estar entre 0.0 y 14.0.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize, utoipa::ToSchema)]
@@ -204,7 +214,7 @@ impl TryFrom<f64> for Co2 {
 }
 
 impl Co2 {
-    pub const MIN: f64 = 400.0;
+    pub const MIN: f64 = 0.0;
     pub const MAX: f64 = 40_000.0;
     pub fn new(value: f64) -> Result<Self, TelemetryError> {
         if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
@@ -219,76 +229,342 @@ impl Co2 {
     }
 }
 
-lazy_static::lazy_static! {
-    static ref DEVICE_ID_REGEX: regex::Regex = regex::Regex::new(r"^[a-zA-Z0-9_-]+$").unwrap();
+/// Index of Air Quality (BME688 BSEC output). Rango 0-500.
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(try_from = "f64")]
+pub struct Iaq(f64);
+
+impl TryFrom<f64> for Iaq {
+    type Error = TelemetryError;
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        Self::new(value)
+    }
 }
 
+impl Iaq {
+    pub const MIN: f64 = 0.0;
+    pub const MAX: f64 = 500.0;
+    pub fn new(value: f64) -> Result<Self, TelemetryError> {
+        if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
+            Err(TelemetryError::Iaq(value))
+        } else {
+            Ok(Self(value))
+        }
+    }
+    #[must_use]
+    pub const fn value(self) -> f64 {
+        self.0
+    }
+}
+
+/// Partículas PM1.0 en µg/m³ (BMV080).
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(try_from = "f64")]
+pub struct Pm1_0(f64);
+
+impl TryFrom<f64> for Pm1_0 {
+    type Error = TelemetryError;
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        Self::new(value)
+    }
+}
+
+impl Pm1_0 {
+    pub const MIN: f64 = 0.0;
+    pub const MAX: f64 = 1000.0;
+    pub fn new(value: f64) -> Result<Self, TelemetryError> {
+        if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
+            Err(TelemetryError::Pm1_0(value))
+        } else {
+            Ok(Self(value))
+        }
+    }
+    #[must_use]
+    pub const fn value(self) -> f64 {
+        self.0
+    }
+}
+
+/// Partículas PM2.5 en µg/m³ (BMV080).
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(try_from = "f64")]
+pub struct Pm2_5(f64);
+
+impl TryFrom<f64> for Pm2_5 {
+    type Error = TelemetryError;
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        Self::new(value)
+    }
+}
+
+impl Pm2_5 {
+    pub const MIN: f64 = 0.0;
+    pub const MAX: f64 = 1000.0;
+    pub fn new(value: f64) -> Result<Self, TelemetryError> {
+        if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
+            Err(TelemetryError::Pm2_5(value))
+        } else {
+            Ok(Self(value))
+        }
+    }
+    #[must_use]
+    pub const fn value(self) -> f64 {
+        self.0
+    }
+}
+
+/// Partículas PM10.0 en µg/m³ (BMV080).
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(try_from = "f64")]
+pub struct Pm10_0(f64);
+
+impl TryFrom<f64> for Pm10_0 {
+    type Error = TelemetryError;
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        Self::new(value)
+    }
+}
+
+impl Pm10_0 {
+    pub const MIN: f64 = 0.0;
+    pub const MAX: f64 = 1000.0;
+    pub fn new(value: f64) -> Result<Self, TelemetryError> {
+        if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
+            Err(TelemetryError::Pm10_0(value))
+        } else {
+            Ok(Self(value))
+        }
+    }
+    #[must_use]
+    pub const fn value(self) -> f64 {
+        self.0
+    }
+}
+
+// ─── Regex para validación de device_id ─────────────────────────────────────
+
+lazy_static::lazy_static! {
+    static ref DEVICE_ID_REGEX: regex::Regex = regex::Regex::new(r"^[a-zA-Z0-9_:.-]+$").unwrap();
+}
+
+// ─── Payload de telemetría (Modelo de Dominio) ──────────────────────────────
+
 /// Payload completo de telemetría proveniente del hardware edge (ESP32, RP2350).
+/// Alineado con el Mega-Schema canónico del Gateway.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema, Validate)]
 pub struct TelemetryPayload {
-    /// ID único del dispositivo `IoT`
-    #[schema(example = "esp32-node-1")]
+    /// ID único del dispositivo `IoT` (ej. `"sensor-AA:BB:CC:DD:EE:FF"`)
+    #[schema(example = "sensor-AA:BB:CC:DD:EE:FF")]
     #[validate(
         length(min = 1, max = 64, message = "El device_id debe tener entre 1 y 64 caracteres"),
-        regex(path = *DEVICE_ID_REGEX, message = "El device_id solo puede contener letras, números, guiones y guiones bajos")
+        regex(path = *DEVICE_ID_REGEX, message = "El device_id solo puede contener letras, números, guiones, guiones bajos, puntos y dos puntos")
     )]
     pub device_id: String,
 
     /// Timestamp de la lectura (UTC)
-    #[schema(example = "2026-08-30T10:00:00Z")]
+    #[schema(example = "2026-09-04T10:00:00Z")]
     pub timestamp: DateTime<Utc>,
 
+    // ─── Ambiental y Calidad de Aire (BME688 / SCD41) ───────────────────
     /// Temperatura validada en grados Celsius
-    pub temperature: Temperature,
+    pub temperature: Option<Temperature>,
+    /// Humedad Relativa (%)
     pub humidity: Option<Humidity>,
-    pub ph: Option<Ph>,
-    pub dissolved_oxygen: Option<DissolvedOxygen>,
+    /// Presión atmosférica (hPa)
     pub pressure: Option<Pressure>,
+    /// Resistencia del gas / VOCs (Ohmios)
     pub gas_resistance: Option<GasResistance>,
+    /// Index of Air Quality (BME688 BSEC)
+    pub iaq: Option<Iaq>,
+    /// CO2 en ppm (SCD41)
     pub co2: Option<Co2>,
+
+    // ─── Partículas (BMV080) ────────────────────────────────────────────
+    /// Partículas PM1.0 (µg/m³)
+    pub pm1_0: Option<Pm1_0>,
+    /// Partículas PM2.5 (µg/m³)
+    pub pm2_5: Option<Pm2_5>,
+    /// Partículas PM10.0 (µg/m³)
+    pub pm10_0: Option<Pm10_0>,
+
+    // ─── Agua y Suelo ───────────────────────────────────────────────────
+    /// pH del agua o suelo (0.0 - 14.0)
+    pub ph: Option<Ph>,
+    /// Oxígeno disuelto (mg/L)
+    pub dissolved_oxygen: Option<DissolvedOxygen>,
+
+    // ─── Diagnósticos del Nodo ──────────────────────────────────────────
+    /// Voltaje de batería en mV
+    pub battery_mv: Option<u32>,
+    /// Contador de ciclos de deep sleep
+    pub sleep_cycles: Option<u32>,
 }
 
-/// DTO binario para Protobuf
+// ─── DTO Protobuf (Wire Format — f32 del hardware) ──────────────────────────
+
+/// DTO binario Protobuf alineado con el Mega-Schema del Gateway.
+/// Los campos usan `float` (f32) para reflejar el contrato de cable 1:1.
 #[derive(Clone, PartialEq, prost::Message)]
 pub struct TelemetryPayloadPb {
     #[prost(string, tag = "1")]
     pub device_id: String,
-    #[prost(int64, tag = "2")]
-    pub timestamp_epoch_ms: i64,
-    #[prost(double, tag = "3")]
-    pub temperature: f64,
-    #[prost(double, optional, tag = "4")]
-    pub humidity: Option<f64>,
-    #[prost(double, optional, tag = "5")]
-    pub ph: Option<f64>,
-    #[prost(double, optional, tag = "6")]
-    pub dissolved_oxygen: Option<f64>,
-    #[prost(double, optional, tag = "7")]
-    pub pressure: Option<f64>,
-    #[prost(double, optional, tag = "8")]
-    pub gas_resistance: Option<f64>,
-    #[prost(double, optional, tag = "9")]
-    pub co2: Option<f64>,
+    #[prost(uint64, tag = "2")]
+    pub timestamp_ms: u64,
+
+    // Ambiental (BME688 / SCD41) — f32 wire types
+    #[prost(float, optional, tag = "3")]
+    pub temperature: Option<f32>,
+    #[prost(float, optional, tag = "4")]
+    pub humidity: Option<f32>,
+    #[prost(float, optional, tag = "5")]
+    pub pressure: Option<f32>,
+    #[prost(float, optional, tag = "6")]
+    pub gas_resistance: Option<f32>,
+    #[prost(float, optional, tag = "7")]
+    pub iaq: Option<f32>,
+    #[prost(uint32, optional, tag = "8")]
+    pub co2: Option<u32>,
+
+    // Partículas (BMV080)
+    #[prost(float, optional, tag = "9")]
+    pub pm1_0: Option<f32>,
+    #[prost(float, optional, tag = "10")]
+    pub pm2_5: Option<f32>,
+    #[prost(float, optional, tag = "11")]
+    pub pm10_0: Option<f32>,
+
+    // Agua y Suelo
+    #[prost(float, optional, tag = "12")]
+    pub ph: Option<f32>,
+    #[prost(float, optional, tag = "13")]
+    pub dissolved_oxygen: Option<f32>,
+
+    // Diagnósticos del Nodo
+    #[prost(uint32, optional, tag = "14")]
+    pub battery_mv: Option<u32>,
+    #[prost(uint32, optional, tag = "15")]
+    pub sleep_cycles: Option<u32>,
 }
 
+/// Conversión del DTO Protobuf (f32 wire) al Modelo de Dominio (f64 analítico).
+/// Cast explícito `f32 as f64` — widening sin pérdida.
 impl TryFrom<TelemetryPayloadPb> for TelemetryPayload {
     type Error = TelemetryError;
     fn try_from(pb: TelemetryPayloadPb) -> Result<Self, Self::Error> {
         let timestamp =
-            chrono::DateTime::from_timestamp_millis(pb.timestamp_epoch_ms).unwrap_or_default();
+            chrono::DateTime::from_timestamp_millis(i64::try_from(pb.timestamp_ms).unwrap_or(0))
+                .unwrap_or_default();
+
         Ok(Self {
             device_id: pb.device_id,
             timestamp,
-            temperature: Temperature::new(pb.temperature)?,
-            humidity: pb.humidity.map(Humidity::new).transpose()?,
-            ph: pb.ph.map(Ph::new).transpose()?,
-            dissolved_oxygen: pb.dissolved_oxygen.map(DissolvedOxygen::new).transpose()?,
-            pressure: pb.pressure.map(Pressure::new).transpose()?,
-            gas_resistance: pb.gas_resistance.map(GasResistance::new).transpose()?,
-            co2: pb.co2.map(Co2::new).transpose()?,
+            temperature: pb.temperature.map(|v| Temperature::new(f64::from(v))).transpose()?,
+            humidity: pb.humidity.map(|v| Humidity::new(f64::from(v))).transpose()?,
+            pressure: pb.pressure.map(|v| Pressure::new(f64::from(v))).transpose()?,
+            gas_resistance: pb
+                .gas_resistance
+                .map(|v| GasResistance::new(f64::from(v)))
+                .transpose()?,
+            iaq: pb.iaq.map(|v| Iaq::new(f64::from(v))).transpose()?,
+            co2: pb.co2.map(|v| Co2::new(f64::from(v))).transpose()?,
+            pm1_0: pb.pm1_0.map(|v| Pm1_0::new(f64::from(v))).transpose()?,
+            pm2_5: pb.pm2_5.map(|v| Pm2_5::new(f64::from(v))).transpose()?,
+            pm10_0: pb.pm10_0.map(|v| Pm10_0::new(f64::from(v))).transpose()?,
+            ph: pb.ph.map(|v| Ph::new(f64::from(v))).transpose()?,
+            dissolved_oxygen: pb
+                .dissolved_oxygen
+                .map(|v| DissolvedOxygen::new(f64::from(v)))
+                .transpose()?,
+            battery_mv: pb.battery_mv,
+            sleep_cycles: pb.sleep_cycles,
         })
     }
 }
+
+// ─── Gateway Health Event (Diagnósticos del Edge Gateway) ───────────────────
+
+/// Evento de salud del Edge Telemetry Gateway (ESP32-P4).
+/// Publicado independientemente de la telemetría de los nodos.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema, Validate)]
+pub struct GatewayHealthEvent {
+    /// ID del gateway (MAC del ESP32-P4)
+    #[schema(example = "gateway-AA:BB:CC:DD:EE:FF")]
+    #[validate(length(
+        min = 1,
+        max = 64,
+        message = "El gateway_id debe tener entre 1 y 64 caracteres"
+    ))]
+    pub gateway_id: String,
+
+    /// Timestamp del evento (UTC)
+    pub timestamp: DateTime<Utc>,
+
+    /// True si la `MicroSD` ha fallado o fue extraída
+    pub is_degraded_mode: bool,
+
+    /// Estado físico del montaje VFS de la `MicroSD`
+    pub sd_card_mounted: bool,
+    /// Capacidad total de la `MicroSD` en MB
+    pub sd_card_total_mb: Option<u32>,
+    /// Espacio libre de la `MicroSD` en MB
+    pub sd_card_free_mb: Option<u32>,
+    /// Contador acumulado de errores I/O
+    pub sd_io_errors: u32,
+
+    /// Tiempo de actividad en segundos
+    pub uptime_seconds: u32,
+    /// Heap libre en bytes
+    pub free_heap_bytes: u32,
+
+    /// Mensaje de alerta crítica para operadores
+    pub alert_message: Option<String>,
+}
+
+/// DTO Protobuf para el evento de salud del Gateway.
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct GatewayHealthEventPb {
+    #[prost(string, tag = "1")]
+    pub gateway_id: String,
+    #[prost(bool, tag = "2")]
+    pub is_degraded_mode: bool,
+    #[prost(bool, tag = "3")]
+    pub sd_card_mounted: bool,
+    #[prost(uint32, tag = "4")]
+    pub sd_card_total_mb: u32,
+    #[prost(uint32, tag = "5")]
+    pub sd_card_free_mb: u32,
+    #[prost(uint32, tag = "6")]
+    pub sd_io_errors: u32,
+    #[prost(uint32, tag = "7")]
+    pub uptime_seconds: u32,
+    #[prost(uint32, tag = "8")]
+    pub free_heap_bytes: u32,
+    #[prost(string, tag = "9")]
+    pub alert_message: String,
+}
+
+impl From<GatewayHealthEventPb> for GatewayHealthEvent {
+    fn from(pb: GatewayHealthEventPb) -> Self {
+        Self {
+            gateway_id: pb.gateway_id,
+            timestamp: Utc::now(),
+            is_degraded_mode: pb.is_degraded_mode,
+            sd_card_mounted: pb.sd_card_mounted,
+            sd_card_total_mb: if pb.sd_card_total_mb > 0 {
+                Some(pb.sd_card_total_mb)
+            } else {
+                None
+            },
+            sd_card_free_mb: if pb.sd_card_free_mb > 0 { Some(pb.sd_card_free_mb) } else { None },
+            sd_io_errors: pb.sd_io_errors,
+            uptime_seconds: pb.uptime_seconds,
+            free_heap_bytes: pb.free_heap_bytes,
+            alert_message: if pb.alert_message.is_empty() { None } else { Some(pb.alert_message) },
+        }
+    }
+}
+
+// ─── Tests ──────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
@@ -317,24 +593,53 @@ mod tests {
         }
 
         #[test]
+        fn test_iaq_validation(val in -10.0..510.0f64) {
+            let iaq = Iaq::new(val);
+            if (0.0..=500.0).contains(&val) {
+                assert!(iaq.is_ok());
+            } else {
+                assert!(iaq.is_err());
+            }
+        }
+
+        #[test]
+        fn test_pm2_5_validation(val in -10.0..1010.0f64) {
+            let pm = Pm2_5::new(val);
+            if (0.0..=1000.0).contains(&val) {
+                assert!(pm.is_ok());
+            } else {
+                assert!(pm.is_err());
+            }
+        }
+
+        #[test]
         fn test_telemetry_protobuf_conversion(
-            temp in -50.0..150.0f64,
-            hum in 0.0..100.0f64
+            temp in -50.0..150.0f32,
+            hum in 0.0..100.0f32
         ) {
             let pb = TelemetryPayloadPb {
                 device_id: "test-node".to_string(),
-                timestamp_epoch_ms: 1700000000000,
-                temperature: temp,
+                timestamp_ms: 1_700_000_000_000,
+                temperature: Some(temp),
                 humidity: Some(hum),
-                ph: None,
-                dissolved_oxygen: None,
                 pressure: None,
                 gas_resistance: None,
+                iaq: None,
                 co2: None,
+                pm1_0: None,
+                pm2_5: None,
+                pm10_0: None,
+                ph: None,
+                dissolved_oxygen: None,
+                battery_mv: Some(3300),
+                sleep_cycles: Some(42),
             };
 
             let payload: Result<TelemetryPayload, _> = pb.try_into();
             assert!(payload.is_ok());
+            let p = payload.unwrap();
+            assert_eq!(p.battery_mv, Some(3300));
+            assert_eq!(p.sleep_cycles, Some(42));
         }
     }
 
@@ -347,10 +652,53 @@ mod tests {
     }
 
     #[test]
-    fn test_valid_json_deserialization() {
-        let json =
-            r#"{"device_id":"node-1","timestamp":"2026-08-30T10:00:00Z","temperature": 25.5}"#;
+    fn test_valid_json_deserialization_minimal() {
+        // Only device_id and timestamp — all sensors optional
+        let json = r#"{"device_id":"node-1","timestamp":"2026-09-04T10:00:00Z"}"#;
         let result: Result<TelemetryPayload, _> = serde_json::from_str(json);
         assert!(result.is_ok());
+        let p = result.unwrap();
+        assert!(p.temperature.is_none());
+        assert!(p.co2.is_none());
+        assert!(p.pm2_5.is_none());
+    }
+
+    #[test]
+    fn test_valid_json_deserialization_full() {
+        let json = r#"{
+            "device_id":"sensor-AA:BB:CC:DD:EE:FF",
+            "timestamp":"2026-09-04T10:00:00Z",
+            "temperature": 25.5,
+            "humidity": 60.0,
+            "pressure": 1013.25,
+            "iaq": 50.0,
+            "co2": 420.0,
+            "pm2_5": 12.5,
+            "battery_mv": 3300
+        }"#;
+        let result: Result<TelemetryPayload, _> = serde_json::from_str(json);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_gateway_health_event_from_pb() {
+        let pb = GatewayHealthEventPb {
+            gateway_id: "gateway-AA:BB:CC:DD:EE:FF".to_string(),
+            is_degraded_mode: true,
+            sd_card_mounted: false,
+            sd_card_total_mb: 32768,
+            sd_card_free_mb: 0,
+            sd_io_errors: 42,
+            uptime_seconds: 3600,
+            free_heap_bytes: 200_000,
+            alert_message: "SD card removed".to_string(),
+        };
+
+        let event: GatewayHealthEvent = pb.into();
+        assert_eq!(event.gateway_id, "gateway-AA:BB:CC:DD:EE:FF");
+        assert!(event.is_degraded_mode);
+        assert!(!event.sd_card_mounted);
+        assert_eq!(event.sd_io_errors, 42);
+        assert_eq!(event.alert_message.as_deref(), Some("SD card removed"));
     }
 }
