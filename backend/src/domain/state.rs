@@ -11,7 +11,7 @@ use shared::TelemetryPayload;
 use sqlx::PgPool;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
-use tokio::sync::{broadcast, mpsc, RwLock};
+use tokio::sync::{broadcast, RwLock};
 
 /// Estado global de la aplicación inyectado en las rutas de Axum.
 #[derive(Debug, Clone)]
@@ -22,8 +22,6 @@ pub struct AppState {
     pub digital_twin: Arc<RwLock<LruCache<String, TelemetryPayload>>>,
     /// Pool de conexiones a la base de datos (`TimescaleDB`).
     pub db_pool: PgPool,
-    /// Cola mpsc para escritura en base de datos asíncrona.
-    pub tx_db: mpsc::Sender<TelemetryPayload>,
     /// Canal broadcast para notificar telemetría en tiempo real a `WebSockets`.
     pub tx_ws: broadcast::Sender<TelemetryPayload>,
 }
@@ -31,15 +29,10 @@ pub struct AppState {
 impl AppState {
     /// Inicializa un nuevo estado global con el pool de base de datos inyectado.
     #[must_use]
-    pub fn new(
-        db_pool: PgPool,
-        tx_db: mpsc::Sender<TelemetryPayload>,
-        tx_ws: broadcast::Sender<TelemetryPayload>,
-    ) -> Self {
+    pub fn new(db_pool: PgPool, tx_ws: broadcast::Sender<TelemetryPayload>) -> Self {
         Self {
             digital_twin: Arc::new(RwLock::new(LruCache::new(NonZeroUsize::new(10_000).unwrap()))),
             db_pool,
-            tx_db,
             tx_ws,
         }
     }

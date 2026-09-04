@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-04
+
+### Changed
+- **Cloud-Native Decoupling**: Direct mTLS endpoints in Axum (`:8443`) have been completely removed. Backend is now a decoupled service without edge termination responsibilities.
+- **Pub/Sub Ingestion**: Ingestion is now handled by a Pull Subscriber asynchronous worker via `google-cloud-pubsub` (v1.4.0) instead of HTTP REST.
+- **Dead-Letter Queue (DLQ)**: Implemented `telemetry_dlq` in PostgreSQL to silently catch and store Protobuf "Poison Pills" and failed validations without causing `panic!` or infinite retry loops.
+
 ## [0.6.0] - 2026-09-04
 
 ### Added

@@ -8,7 +8,7 @@ First off, thank you for considering contributing to the `oscar-bio-dev` telemet
 2. **Environment Setup:**
     - Install the Rust toolchain (we use stable, pinned via `rust-toolchain.toml`).
     - Install Trunk for Wasm builds: `cargo install trunk`.
-    - Run `docker-compose up -d` to start the TimescaleDB/PostGIS database.
+    - Run `docker-compose up -d` to start the TimescaleDB/PostGIS database and GCP Pub/Sub emulator.
     - Copy `.env.example` to `.env` and fill in your `DATABASE_URL` and `GEMINI_API_KEY`.
     - Migrations run automatically on backend startup via `sqlx::migrate!()`.
 3. **Build the Frontend:** `cd frontend && trunk build && cd ..`

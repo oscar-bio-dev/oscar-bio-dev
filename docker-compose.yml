@@ -6,10 +6,17 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: oscar_bio_dev
-    ports:
-      - "5432:5432"
+    # Removed ports 5432:5432 for security (only accessible within docker network or via proxy)
     volumes:
       - timescaledb_data:/home/postgres/pgdata/data
+    restart: always
+
+  pubsub-emulator:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    container_name: pubsub_emulator
+    command: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085
+    ports:
+      - "8085:8085"
     restart: always
 
 volumes:

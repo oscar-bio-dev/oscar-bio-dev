@@ -39,6 +39,8 @@ bytes = "1.5"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 futures-util = "0.3"
 lru = "0.18.3"
+google-cloud-pubsub = "1.4.0"
+google-cloud-default = "0.4.0"
 
 [dev-dependencies]
 proptest = "1.4"

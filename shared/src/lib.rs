@@ -353,6 +353,21 @@ lazy_static::lazy_static! {
 /// Alineado con el Mega-Schema canónico del Gateway.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema, Validate)]
 pub struct TelemetryPayload {
+    /// Versión del protocolo
+    pub protocol_version: u32,
+    /// Versión del esquema
+    pub schema_version: u32,
+
+    /// ID único del evento (UUID) para idempotencia
+    #[schema(example = "550e8400-e29b-41d4-a716-446655440000")]
+    #[validate(length(min = 1, max = 64))]
+    pub event_id: String,
+
+    /// ID del gateway (MAC del ESP32-P4)
+    #[schema(example = "gateway-AA:BB:CC:DD:EE:FF")]
+    #[validate(length(min = 1, max = 64))]
+    pub gateway_id: String,
+
     /// ID único del dispositivo `IoT` (ej. `"sensor-AA:BB:CC:DD:EE:FF"`)
     #[schema(example = "sensor-AA:BB:CC:DD:EE:FF")]
     #[validate(
@@ -361,9 +376,16 @@ pub struct TelemetryPayload {
     )]
     pub device_id: String,
 
-    /// Timestamp de la lectura (UTC)
+    /// Secuencia originada por el nodo
+    pub node_sequence: u32,
+
+    /// Timestamp de lectura en el nodo (UTC)
     #[schema(example = "2026-09-04T10:00:00Z")]
-    pub timestamp: DateTime<Utc>,
+    pub measured_at: DateTime<Utc>,
+
+    /// Timestamp de ingestión en el gateway (UTC)
+    #[schema(example = "2026-09-04T10:00:01Z")]
+    pub ingested_at: DateTime<Utc>,
 
     // ─── Ambiental y Calidad de Aire (BME688 / SCD41) ───────────────────
     /// Temperatura validada en grados Celsius
@@ -406,43 +428,55 @@ pub struct TelemetryPayload {
 /// Los campos usan `float` (f32) para reflejar el contrato de cable 1:1.
 #[derive(Clone, PartialEq, prost::Message)]
 pub struct TelemetryPayloadPb {
-    #[prost(string, tag = "1")]
+    #[prost(uint32, tag = "1")]
+    pub protocol_version: u32,
+    #[prost(uint32, tag = "2")]
+    pub schema_version: u32,
+    #[prost(string, tag = "3")]
+    pub event_id: String,
+    #[prost(string, tag = "4")]
+    pub gateway_id: String,
+    #[prost(string, tag = "5")]
     pub device_id: String,
-    #[prost(uint64, tag = "2")]
-    pub timestamp_ms: u64,
+    #[prost(uint32, tag = "6")]
+    pub node_sequence: u32,
+    #[prost(uint64, tag = "7")]
+    pub measured_at_ms: u64,
+    #[prost(uint64, tag = "8")]
+    pub ingested_at_ms: u64,
 
     // Ambiental (BME688 / SCD41) — f32 wire types
-    #[prost(float, optional, tag = "3")]
+    #[prost(float, optional, tag = "9")]
     pub temperature: Option<f32>,
-    #[prost(float, optional, tag = "4")]
+    #[prost(float, optional, tag = "10")]
     pub humidity: Option<f32>,
-    #[prost(float, optional, tag = "5")]
+    #[prost(float, optional, tag = "11")]
     pub pressure: Option<f32>,
-    #[prost(float, optional, tag = "6")]
+    #[prost(float, optional, tag = "12")]
     pub gas_resistance: Option<f32>,
-    #[prost(float, optional, tag = "7")]
+    #[prost(float, optional, tag = "13")]
     pub iaq: Option<f32>,
-    #[prost(uint32, optional, tag = "8")]
+    #[prost(uint32, optional, tag = "14")]
     pub co2: Option<u32>,
 
     // Partículas (BMV080)
-    #[prost(float, optional, tag = "9")]
+    #[prost(float, optional, tag = "15")]
     pub pm1_0: Option<f32>,
-    #[prost(float, optional, tag = "10")]
+    #[prost(float, optional, tag = "16")]
     pub pm2_5: Option<f32>,
-    #[prost(float, optional, tag = "11")]
+    #[prost(float, optional, tag = "17")]
     pub pm10_0: Option<f32>,
 
     // Agua y Suelo
-    #[prost(float, optional, tag = "12")]
+    #[prost(float, optional, tag = "18")]
     pub ph: Option<f32>,
-    #[prost(float, optional, tag = "13")]
+    #[prost(float, optional, tag = "19")]
     pub dissolved_oxygen: Option<f32>,
 
     // Diagnósticos del Nodo
-    #[prost(uint32, optional, tag = "14")]
+    #[prost(uint32, optional, tag = "20")]
     pub battery_mv: Option<u32>,
-    #[prost(uint32, optional, tag = "15")]
+    #[prost(uint32, optional, tag = "21")]
     pub sleep_cycles: Option<u32>,
 }
 
@@ -451,13 +485,23 @@ pub struct TelemetryPayloadPb {
 impl TryFrom<TelemetryPayloadPb> for TelemetryPayload {
     type Error = TelemetryError;
     fn try_from(pb: TelemetryPayloadPb) -> Result<Self, Self::Error> {
-        let timestamp =
-            chrono::DateTime::from_timestamp_millis(i64::try_from(pb.timestamp_ms).unwrap_or(0))
+        let measured_at =
+            chrono::DateTime::from_timestamp_millis(i64::try_from(pb.measured_at_ms).unwrap_or(0))
+                .unwrap_or_default();
+
+        let ingested_at =
+            chrono::DateTime::from_timestamp_millis(i64::try_from(pb.ingested_at_ms).unwrap_or(0))
                 .unwrap_or_default();
 
         Ok(Self {
+            protocol_version: pb.protocol_version,
+            schema_version: pb.schema_version,
+            event_id: pb.event_id,
+            gateway_id: pb.gateway_id,
             device_id: pb.device_id,
-            timestamp,
+            node_sequence: pb.node_sequence,
+            measured_at,
+            ingested_at,
             temperature: pb.temperature.map(|v| Temperature::new(f64::from(v))).transpose()?,
             humidity: pb.humidity.map(|v| Humidity::new(f64::from(v))).transpose()?,
             pressure: pb.pressure.map(|v| Pressure::new(f64::from(v))).transpose()?,
@@ -618,8 +662,14 @@ mod tests {
             hum in 0.0..100.0f32
         ) {
             let pb = TelemetryPayloadPb {
+                protocol_version: 1,
+                schema_version: 1,
+                event_id: "evt-123".to_string(),
+                gateway_id: "gw-1".to_string(),
                 device_id: "test-node".to_string(),
-                timestamp_ms: 1_700_000_000_000,
+                node_sequence: 1,
+                measured_at_ms: 1_700_000_000_000,
+                ingested_at_ms: 1_700_000_000_100,
                 temperature: Some(temp),
                 humidity: Some(hum),
                 pressure: None,
@@ -640,21 +690,31 @@ mod tests {
             let p = payload.unwrap();
             assert_eq!(p.battery_mv, Some(3300));
             assert_eq!(p.sleep_cycles, Some(42));
+            assert_eq!(p.event_id, "evt-123");
         }
     }
 
     #[test]
     fn test_invalid_json_deserialization() {
         let json =
-            r#"{"device_id":"node-1","timestamp":"2026-08-30T10:00:00Z","temperature": 999.0}"#;
+            r#"{"device_id":"node-1","measured_at":"2026-08-30T10:00:00Z","temperature": 999.0}"#;
         let result: Result<TelemetryPayload, _> = serde_json::from_str(json);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_valid_json_deserialization_minimal() {
-        // Only device_id and timestamp — all sensors optional
-        let json = r#"{"device_id":"node-1","timestamp":"2026-09-04T10:00:00Z"}"#;
+        // Now requires protocol_version, schema_version, event_id, gateway_id, node_sequence, measured_at, ingested_at
+        let json = r#"{
+            "protocol_version": 1,
+            "schema_version": 1,
+            "event_id": "evt-123",
+            "gateway_id": "gw-1",
+            "device_id": "node-1",
+            "node_sequence": 1,
+            "measured_at": "2026-09-04T10:00:00Z",
+            "ingested_at": "2026-09-04T10:00:00Z"
+        }"#;
         let result: Result<TelemetryPayload, _> = serde_json::from_str(json);
         assert!(result.is_ok());
         let p = result.unwrap();
@@ -666,8 +726,14 @@ mod tests {
     #[test]
     fn test_valid_json_deserialization_full() {
         let json = r#"{
+            "protocol_version": 1,
+            "schema_version": 1,
+            "event_id": "evt-123",
+            "gateway_id": "gw-1",
             "device_id":"sensor-AA:BB:CC:DD:EE:FF",
-            "timestamp":"2026-09-04T10:00:00Z",
+            "node_sequence": 1,
+            "measured_at":"2026-09-04T10:00:00Z",
+            "ingested_at":"2026-09-04T10:00:01Z",
             "temperature": 25.5,
             "humidity": 60.0,
             "pressure": 1013.25,

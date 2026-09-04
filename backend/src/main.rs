@@ -34,11 +34,8 @@ use utoipa_swagger_ui::SwaggerUi;
 #[openapi(
     paths(
         backend::api::digital_twin::get_digital_twin,
-        backend::api::telemetry::ingest_telemetry,
-        backend::api::telemetry::ingest_telemetry_protobuf,
-        backend::api::chat::chat_with_twin,
-        backend::api::gateway_health::ingest_gateway_health,
-        backend::api::gateway_health::ingest_gateway_health_protobuf
+        backend::api::digital_twin::get_digital_twin,
+        backend::api::chat::chat_with_twin
     ),
     components(
         schemas(
@@ -100,47 +97,6 @@ use axum::{error_handling::HandleErrorLayer, BoxError};
 
 use backend::infrastructure::db::init_db_pool;
 
-use axum_server::tls_rustls::RustlsConfig;
-use rustls::server::WebPkiClientVerifier;
-use rustls::RootCertStore;
-use rustls::ServerConfig;
-
-fn build_tls_configs() -> Result<(RustlsConfig, RustlsConfig), Box<dyn std::error::Error>> {
-    let mut root_store = RootCertStore::empty();
-    let ca_file = std::fs::File::open("certs/ca.crt")?;
-    let mut ca_reader = std::io::BufReader::new(ca_file);
-    let certs = rustls_pemfile::certs(&mut ca_reader).filter_map(Result::ok);
-    for cert in certs {
-        root_store.add(cert)?;
-    }
-
-    let strict_client_auth = WebPkiClientVerifier::builder(root_store.into()).build()?;
-
-    let cert_file = std::fs::File::open("certs/server.crt")?;
-    let mut cert_reader = std::io::BufReader::new(cert_file);
-    let cert_chain: Vec<_> =
-        rustls_pemfile::certs(&mut cert_reader).filter_map(Result::ok).collect();
-
-    let key_file = std::fs::File::open("certs/server.key")?;
-    let mut key_reader = std::io::BufReader::new(key_file);
-    let key = rustls_pemfile::private_key(&mut key_reader)?.ok_or("No key found in server.key")?;
-
-    let mut strict_server_config = ServerConfig::builder()
-        .with_client_cert_verifier(strict_client_auth)
-        .with_single_cert(cert_chain.clone(), key.clone_key())?;
-
-    let mut public_server_config =
-        ServerConfig::builder().with_no_client_auth().with_single_cert(cert_chain, key)?;
-
-    strict_server_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
-    public_server_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
-
-    Ok((
-        RustlsConfig::from_config(Arc::new(public_server_config)),
-        RustlsConfig::from_config(Arc::new(strict_server_config)),
-    ))
-}
-
 async fn shutdown_signal() {
     let _ = tokio::signal::ctrl_c().await;
     tracing::info!("Received Ctrl-C, shutting down gracefully...");
@@ -166,15 +122,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Verificando migraciones SQL...");
     sqlx::migrate!("./migrations").run(&db_pool).await?;
 
-    // Inicializar canales de buffer asíncrono y streaming WebSockets
-    let (tx_db, rx_db) = tokio::sync::mpsc::channel(10_000);
+    // Inicializar canales de streaming WebSockets
     let (tx_ws, _rx_ws) = tokio::sync::broadcast::channel(100);
 
-    // Iniciar el worker de persistencia en background
-    backend::infrastructure::worker::start_db_worker(db_pool.clone(), rx_db);
-
     // Estado concurrente
-    let app_state = AppState::new(db_pool, tx_db, tx_ws);
+    let app_state = AppState::new(db_pool.clone(), tx_ws);
+
+    // Iniciar el worker de Pub/Sub en background
+    if let Err(e) = backend::infrastructure::pubsub::start_pubsub_worker(app_state.clone()).await {
+        tracing::error!("No se pudo inicializar Pub/Sub Worker: {}", e);
+    }
 
     // Configurar rate limiting para la API pública (ej. 2 requests por segundo, burst de 10)
     let governor_conf = Arc::new(
@@ -233,34 +190,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(cors_layer)
         .with_state(app_state.clone());
 
-    let strict_app = Router::new()
-        .route("/api/telemetry", axum::routing::post(backend::api::telemetry::ingest_telemetry))
-        .route(
-            "/api/telemetry/protobuf",
-            axum::routing::post(backend::api::telemetry::ingest_telemetry_protobuf),
-        )
-        .route(
-            "/api/gateway-health",
-            axum::routing::post(backend::api::gateway_health::ingest_gateway_health),
-        )
-        .route(
-            "/api/gateway-health/protobuf",
-            axum::routing::post(backend::api::gateway_health::ingest_gateway_health_protobuf),
-        )
-        .layer(
-            tower::ServiceBuilder::new()
-                .layer(RequestBodyLimitLayer::new(16 * 1024))
-                .layer(HandleErrorLayer::new(|err: BoxError| async move {
-                    (
-                        axum::http::StatusCode::REQUEST_TIMEOUT,
-                        format!("Request dropped by protection layer: {err}"),
-                    )
-                }))
-                .layer(TimeoutLayer::new(Duration::from_secs(30))),
-        )
-        .layer(TraceLayer::new_for_http())
-        .with_state(app_state);
-
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let mut host = std::env::var("APP_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
 
@@ -269,34 +198,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let public_addr = format!("{host}:{port}");
-    let public_socket: std::net::SocketAddr = public_addr.parse()?;
+    let listener = tokio::net::TcpListener::bind(&public_addr).await?;
 
-    let strict_addr = format!("{host}:8443");
-    let strict_socket: std::net::SocketAddr = strict_addr.parse()?;
+    tracing::info!("Servidor web público iniciado en http://{}", public_addr);
 
-    let (public_tls, strict_tls) = build_tls_configs()?;
+    // Shutdown gracefully
+    let axum_server = axum::serve(listener, public_app.into_make_service())
+        .with_graceful_shutdown(shutdown_signal());
 
-    tracing::info!("Servidor web público (sin client auth) en https://{}", public_addr);
-    tracing::info!("Servidor IoT mTLS estricto en https://{}", strict_addr);
-
-    let handle = axum_server::Handle::new();
-    let handle_clone = handle.clone();
-    tokio::spawn(async move {
-        shutdown_signal().await;
-        handle_clone.graceful_shutdown(Some(Duration::from_secs(10)));
-    });
-
-    let public_server = axum_server::bind_rustls(public_socket, public_tls)
-        .handle(handle.clone())
-        .serve(public_app.into_make_service_with_connect_info::<std::net::SocketAddr>());
-
-    let strict_server = axum_server::bind_rustls(strict_socket, strict_tls)
-        .handle(handle)
-        .serve(strict_app.into_make_service_with_connect_info::<std::net::SocketAddr>());
-
-    let (res_pub, res_strict) = tokio::join!(public_server, strict_server);
-    res_pub?;
-    res_strict?;
+    axum_server.await?;
 
     Ok(())
 }

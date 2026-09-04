@@ -53,10 +53,10 @@ To ensure relentless quality and comply with industrial standards, the platform'
 - [x] **Reactive Wasm Frontend:** Interactive graphical interface (dashboard) compiled to **WebAssembly** (Leptos), eliminating external JS frameworks.
 - [x] **Trunk/Leptos CSR:** Transition of the user interface to Leptos (Wasm) for reactive visualization of high-frequency data without JS overhead.
 - [x] **Distroless Containerization:** Creation of ultra-lightweight Docker images (`scratch`, < 15MB) shielded against OS-level vulnerabilities.
-- [x] **Hardware Security (mTLS):** Mutual TLS authentication using `rustls` to ensure that only sensors with valid cryptographic certificates can publish data.
+- [x] **Cloud-Native Decoupling (Pub/Sub):** Replaced direct Axum mTLS endpoints with a native GCP Pub/Sub Pull Subscriber to ingest Gateway telemetry directly from the cloud infrastructure.
+- [x] **Dead-Letter Queue (DLQ):** Implementation of a resilient DLQ (`telemetry_dlq`) in TimescaleDB to catch and persist Protobuf 'Poison Pills' without crashing the worker or entering infinite retry loops.
 - [x] **Mega-Schema Convergence:** Unified 15-field Protobuf schema aligned 1:1 between edge firmware (C/Nanopb) and backend (Rust/prost), covering environmental, particulate, aquatic, and node diagnostic data.
 - [x] **Gateway Health Diagnostics:** Dedicated ingestion pipeline and TimescaleDB hypertable for edge gateway health events (SD card status, heap monitoring, uptime, degradation alerts).
-
 ---
 
 ## 🛠️ Local Development Environment
@@ -68,7 +68,7 @@ This repository is configured with the strictest rules. To contribute or spin up
    ```bash
    cp .env.example .env   # Fill in your GEMINI_API_KEY and DATABASE_URL
    ```
-3. **Start the Spatial-Temporal Database:**
+3. **Start the Database and Pub/Sub Emulator:**
    ```bash
    docker-compose up -d
    ```

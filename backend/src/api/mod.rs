@@ -8,11 +8,7 @@
 pub mod chat;
 /// Submódulo encargado de la lectura global del gemelo digital.
 pub mod digital_twin;
-/// Submódulo encargado de la ingesta de diagnósticos del Edge Gateway.
-pub mod gateway_health;
 /// Submódulo de Kubernetes Probes
 pub mod health;
-/// Submódulo encargado de la recepción y validación HTTP de la telemetría.
-pub mod telemetry;
 /// Submódulo encargado del streaming y control en tiempo real.
 pub mod ws;

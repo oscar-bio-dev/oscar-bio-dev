@@ -29,8 +29,6 @@ debug/
 ehthumbs.db
 Thumbs.db
 
-# Cryptography and mTLS
-certs/
 
 # WebAssembly build output
 frontend/dist/

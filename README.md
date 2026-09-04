@@ -27,12 +27,12 @@ graph TD
 
     subgraph "Rust Backend Core (Axum)"
         B_PUB[":3000 Public Port"] -->|REST / WS| DT[In-Memory Digital Twin]
-        B_MTLS[":8443 mTLS Strict Port"] --> V{Payload Validator}
+        PS -->|"Pull Subscriber"| V{Payload Validator}
         V -->|Type-Safe| DT
-        V -->|"Async mpsc"| W[DB Worker]
-        W -->|Batch Insert| DB[(TimescaleDB + PostGIS)]
+        V -->|Batch Insert| DB[(TimescaleDB + PostGIS)]
+        V -->|Poison Pills| DLQ[(Dead-Letter Queue)]
         DT <-->|State Context| AI(Gemini AI Agent)
-        B_MTLS -->|Health Events| GH[Gateway Health Persister]
+        PS -->|"Gateway Health Events"| GH[Gateway Health Persister]
         GH --> DB
     end
 
@@ -55,10 +55,11 @@ graph TD
 
 - **Unified Mega-Schema (15 fields)**: A single Protobuf contract shared between edge firmware (C/Nanopb) and backend (Rust/prost), covering environmental, particulate, aquatic, and node diagnostics data.
 - **Zero-Cost Binary Pipelines**: Uses `prost` (Protobuf) with hybrid `f32` (wire DTO) → `f64` (domain/DB) architecture for lossless telemetry deserialization.
-- **Hardware Security (mTLS)**: Mutual TLS authentication via `rustls` to ensure that only physical nodes with valid cryptographic certificates can publish data.
-- **Dual-Port Edge/Cloud Routing**: Port `:3000` serves the public UI, Chatbot, and WebSocket streaming (rate-limited). Port `:8443` exclusively handles mTLS IoT sensor and gateway health ingestion.
+- **Hardware Security via Cloud**: Uses GCP Pub/Sub with Edge Gateway (JWT/ES256) auth. The backend acts as a completely decoupled consumer service.
+- **Resilient Ingestion (DLQ)**: A native Cloud-Native Pull Subscriber handles ingestion asynchronously, persisting poison pills to a Dead-Letter Queue instead of failing or retrying infinitely.
+- **Single Public Port**: Port `:3000` serves the public UI, Chatbot, and WebSocket streaming (rate-limited), ensuring no direct edge termination logic bloats the backend.
 - **Cognitive Digital Twin**: An in-memory, thread-safe state representation (`Arc<RwLock<LruCache>>`, capped at 10,000 devices) of all physical nodes.
-- **Gateway Health Diagnostics**: Dedicated ingestion pipeline for edge gateway health events (SD card status, heap monitoring, degradation alerts).
+- **Gateway Health Diagnostics**: Dedicated ingestion pipeline via Pub/Sub for edge gateway health events (SD card status, heap monitoring, degradation alerts).
 - **EcoTech AI Agent**: Direct integration with Gemini Flash Lite via `system_instruction` schema, with prompt injection protection and real-time reasoning over environmental data.
 - **WebAssembly (Wasm) Dashboard**: A custom-built, Gruvbox-styled SPA using **Leptos**, avoiding JS bloat and rendering 12+ sensor metrics per node.
 - **Spatial-Temporal Database**: Pre-configured `docker-compose` stack with **PostgreSQL + PostGIS + TimescaleDB**.

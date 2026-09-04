@@ -33,15 +33,11 @@ COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/backend /app/b
 # Copy the frontend dist (served by the backend via ServeDir)
 COPY --from=builder /app/frontend/dist /app/frontend/dist
 
-# Copy TLS certificates for mTLS (provided at deploy time)
-COPY --from=builder /app/certs /app/backend/certs
-
 # Copy SQL migrations (auto-applied on startup via sqlx::migrate!)
 COPY --from=builder /app/backend/migrations /app/backend/migrations
 
-# Expose dual ports: Public (:3000) and mTLS Strict (:8443)
+# Expose Public Port (:3000)
 EXPOSE 3000
-EXPOSE 8443
 
 # Environment defaults (override via docker run -e or Cloud Run)
 ENV PORT=3000
