@@ -105,8 +105,6 @@ async fn shutdown_signal() {
 #[tokio::main]
 #[allow(clippy::too_many_lines)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let _ = rustls::crypto::ring::default_provider().install_default();
-
     // Cargar variables de entorno
     let _ = dotenvy::dotenv();
 

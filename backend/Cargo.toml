@@ -14,9 +14,6 @@ readme.workspace = true
 shared = { path = "../shared" }
 # El servidor web (router)
 axum = { version = "0.7", features = ["ws", "macros"] }
-axum-server = { version = "0.7", features = ["tls-rustls"] }
-rustls = { version = "0.23", features = ["ring"] }
-rustls-pemfile = "2.1"
 # El runtime asíncrono
 tokio = { version = "1.36", features = ["full"] }
 # Para servir archivos estáticos (CSS, imágenes)
@@ -40,7 +37,6 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-feature
 futures-util = "0.3"
 lru = "0.18.3"
 google-cloud-pubsub = "1.4.0"
-google-cloud-default = "0.4.0"
 
 [dev-dependencies]
 proptest = "1.4"
