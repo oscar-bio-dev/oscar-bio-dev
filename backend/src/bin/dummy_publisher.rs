@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Oscar Mora / SetaeSense. All rights reserved.
 
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use chrono::Utc;
 use prost::Message;
 use reqwest::Client;
@@ -15,22 +16,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut sequence = 1;
     println!("Starting Dummy Publisher...");
-    println!("Sending 21-field Protobuf payloads to {} every 2 seconds", topic_url);
+    println!("Sending 21-field Protobuf payloads to {topic_url} every 2 seconds");
 
     loop {
-        let now_ms = Utc::now().timestamp_millis() as u64;
+        let now_ms = u64::try_from(Utc::now().timestamp_millis()).unwrap_or(0);
 
         let payload = TelemetryPayloadPb {
             protocol_version: 1,
             schema_version: 1,
-            event_id: format!("dummy-evt-{}", sequence),
+            event_id: format!("dummy-evt-{sequence}"),
             gateway_id: "Gtw-Lab-01".to_string(),
             device_id: "ESP32-P4-Test".to_string(),
             node_sequence: sequence,
             measured_at_ms: now_ms - 100,
             ingested_at_ms: now_ms,
-            temperature: Some(24.5 + (sequence as f32 % 5.0) * 0.1),
-            humidity: Some(45.0 + (sequence as f32 % 10.0) * 0.5),
+            temperature: Some(f32::from((sequence % 5) as u16).mul_add(0.1, 24.5)),
+            humidity: Some(f32::from((sequence % 10) as u16).mul_add(0.5, 45.0)),
             ph: Some(7.2),
             dissolved_oxygen: Some(8.1),
             pressure: Some(1013.25),
@@ -47,8 +48,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut buf = Vec::new();
         payload.encode(&mut buf)?;
 
-        // Encode payload as Base64 for the REST API
-        use base64::{engine::general_purpose::STANDARD, Engine as _};
         let b64_data = STANDARD.encode(&buf);
 
         let body = json!({
@@ -62,8 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         match client.post(topic_url).json(&body).send().await {
             Ok(res) if res.status().is_success() => {
                 println!(
-                    "Published Event {} -> CO2: {} ppm, Temp: {:.1} °C",
-                    sequence,
+                    "Published Event {sequence} -> CO2: {} ppm, Temp: {:.1} °C",
                     payload.co2.unwrap(),
                     payload.temperature.unwrap()
                 );
@@ -76,7 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );
             }
             Err(e) => {
-                println!("Connection error: {}. Is the Pub/Sub emulator running on port 8085?", e);
+                println!("Connection error: {e}. Is the Pub/Sub emulator running on port 8085?");
             }
         }
 
