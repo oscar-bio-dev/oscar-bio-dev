@@ -14,8 +14,15 @@ use validator::Validate;
 pub async fn start_pubsub_worker(state: AppState) -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Inicializando Pub/Sub Subscriber...");
 
-    // El client_builder automáticamente usará PUBSUB_EMULATOR_HOST si está definida.
-    let client = Subscriber::builder().build().await?;
+    // Configuramos el cliente (soporte para emulador)
+    let mut builder = Subscriber::builder();
+    if let Ok(emulator_host) = std::env::var("PUBSUB_EMULATOR_HOST") {
+        tracing::info!("Usando emulador Pub/Sub en: {}", emulator_host);
+        let endpoint = format!("http://{emulator_host}");
+        let anon = google_cloud_auth::credentials::anonymous::Builder::new().build();
+        builder = builder.with_endpoint(endpoint).with_credentials(anon);
+    }
+    let client = builder.build().await?;
 
     let subscription_name = std::env::var("PUBSUB_SUBSCRIPTION_NAME").unwrap_or_else(|_| {
         "projects/oscar-bio-dev-project/subscriptions/room-telemetry-sub".to_string()
