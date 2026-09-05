@@ -53,7 +53,7 @@ graph TD
 
 ### Key Features
 
-- **Unified Mega-Schema (15 fields)**: A single Protobuf contract shared between edge firmware (C/Nanopb) and backend (Rust/prost), covering environmental, particulate, aquatic, and node diagnostics data.
+- **Unified Mega-Schema (21 fields)**: A single Protobuf contract shared between edge firmware (C/Nanopb) and backend (Rust/prost), covering environmental, particulate, aquatic, and node diagnostics data.
 - **Zero-Cost Binary Pipelines**: Uses `prost` (Protobuf) with hybrid `f32` (wire DTO) → `f64` (domain/DB) architecture for lossless telemetry deserialization.
 - **Hardware Security via Cloud**: Uses GCP Pub/Sub with Edge Gateway (JWT/ES256) auth. The backend acts as a completely decoupled consumer service.
 - **Resilient Ingestion (DLQ)**: A native Cloud-Native Pull Subscriber handles ingestion asynchronously, persisting poison pills to a Dead-Letter Queue instead of failing or retrying infinitely.
@@ -61,7 +61,7 @@ graph TD
 - **Cognitive Digital Twin**: An in-memory, thread-safe state representation (`Arc<RwLock<LruCache>>`, capped at 10,000 devices) of all physical nodes.
 - **Gateway Health Diagnostics**: Dedicated ingestion pipeline via Pub/Sub for edge gateway health events (SD card status, heap monitoring, degradation alerts).
 - **EcoTech AI Agent**: Direct integration with Gemini Flash Lite via `system_instruction` schema, with prompt injection protection and real-time reasoning over environmental data.
-- **WebAssembly (Wasm) Dashboard**: A custom-built, Gruvbox-styled SPA using **Leptos**, avoiding JS bloat and rendering 12+ sensor metrics per node.
+- **WebAssembly (Wasm) Dashboard**: A custom-built, Gruvbox-styled SPA using **Leptos**, featuring real-time WebSocket reconnection, "Staleness" visualization, and avoiding JS bloat while rendering 12+ sensor metrics per node.
 - **Spatial-Temporal Database**: Pre-configured `docker-compose` stack with **PostgreSQL + PostGIS + TimescaleDB**.
 
 ### Telemetry Schema

@@ -57,6 +57,8 @@ To ensure relentless quality and comply with industrial standards, the platform'
 - [x] **Dead-Letter Queue (DLQ):** Implementation of a resilient DLQ (`telemetry_dlq`) in TimescaleDB to catch and persist Protobuf 'Poison Pills' without crashing the worker or entering infinite retry loops.
 - [x] **Mega-Schema Convergence:** Unified 15-field Protobuf schema aligned 1:1 between edge firmware (C/Nanopb) and backend (Rust/prost), covering environmental, particulate, aquatic, and node diagnostic data.
 - [x] **Gateway Health Diagnostics:** Dedicated ingestion pipeline and TimescaleDB hypertable for edge gateway health events (SD card status, heap monitoring, uptime, degradation alerts).
+- [x] **Industrial HMI Resilience**: Implemented automatic WebSocket reconnects, "Stale" data attenuation (grayscaling/dimming), and Gruvbox aesthetics.
+- [x] **End-to-End Local Emulator**: Implemented a `dummy_publisher` to inject 21-field Protobuf payloads into the local GCP Pub/Sub emulator to validate full stack connectivity.
 ---
 
 ## 🛠️ Local Development Environment

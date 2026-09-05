@@ -6,8 +6,8 @@ RUN apk add --no-cache musl-dev pkgconfig openssl-dev perl make
 
 # Add Wasm target for Leptos frontend
 RUN rustup target add wasm32-unknown-unknown
-# Install Trunk for building the Leptos SPA
-RUN wget -qO- https://github.com/trunk-rs/trunk/releases/download/v0.20.1/trunk-x86_64-unknown-linux-musl.tar.gz | tar -xzf- -C /usr/local/bin
+# Install Trunk securely via cargo (locked dependencies)
+RUN cargo install trunk --version 0.20.1 --locked
 
 WORKDIR /app
 

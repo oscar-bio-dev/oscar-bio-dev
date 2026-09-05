@@ -215,9 +215,10 @@ dependencies = [
 
 [[package]]
 name = "backend"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "axum",
+ "base64 0.23.1",
  "bytes",
  "chrono",
  "dotenvy",
@@ -996,11 +997,12 @@ dependencies = [
 
 [[package]]
 name = "frontend"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "console_error_panic_hook",
  "futures",
  "gloo-net 0.3.1",
+ "js-sys",
  "leptos",
  "leptos_meta",
  "leptos_router",
@@ -3939,7 +3941,7 @@ dependencies = [
 
 [[package]]
 name = "shared"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "chrono",
  "lazy_static",

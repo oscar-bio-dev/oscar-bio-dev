@@ -199,3 +199,58 @@ footer {
     text-decoration: none;
     color: inherit;
 }
+
+/* Telemetry Status & Animations */
+.status-waiting {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    color: var(--accent-yellow);
+    font-family: var(--font-mono);
+    text-align: center;
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    background-color: var(--bg-soft);
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(250, 189, 47, 0.3);
+    border-radius: 50%;
+    border-top-color: var(--accent-yellow);
+    animation: spin 1s ease-in-out infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.pulse-text {
+    animation: pulse-opacity 2s infinite ease-in-out;
+}
+
+@keyframes pulse-opacity {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.stale-data {
+    opacity: 0.5;
+    filter: grayscale(0.8);
+    transition: all 0.5s ease;
+}
+
+.data-age {
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+    text-align: right;
+    margin-top: 1rem;
+    font-style: italic;
+    border-top: 1px solid var(--border-color);
+    padding-top: 0.5rem;
+}
+

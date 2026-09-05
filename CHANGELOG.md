@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-05
+
+### Added
+- **Leptos Industrial HMI**: Complete refactor of `room_monitoring.rs` to include a Gruvbox Dark aesthetic, automatic WebSocket reconnections (with `Connecting`/`Disconnected` UI states), and visual "Staleness" attenuation for telemetry older than 5 seconds.
+- **Dummy Publisher (E2E Test)**: `backend/src/bin/dummy_publisher.rs` created to inject 21-field Protobuf payloads into the local GCP Pub/Sub emulator, bypassing physical hardware limitations for local testing.
+
+### Changed
+- **Repository Governance**: `AGENTS.md` upgraded to maximum industrial standards, explicitly banning Go, strictly enforcing Rust pedantic `clippy` rules, and mandating strict GitHub workflow practices (1 PR = 1 Purpose, CI blocks, Squash merges).
+- **Mega-Schema Convergence**: Updated references and Protobuf validation to handle the full 21-field payload consistently across the full stack.
+
 ## [0.7.0] - 2026-09-04
 
 ### Changed

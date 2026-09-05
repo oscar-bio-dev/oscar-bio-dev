@@ -34,7 +34,8 @@ Thumbs.db
 frontend/dist/
 
 # Agent workspace (Antigravity IDE)
-.agents/
+# .agents/ is now tracked to share AGENTS.md rules with the team.
+
 
 # Firebase cache
 .firebase/
