@@ -148,6 +148,9 @@ async fn persist_telemetry(
     state: &AppState,
     payload: &TelemetryPayload,
 ) -> Result<(), sqlx::Error> {
+    let parsed_event_id =
+        uuid::Uuid::parse_str(&payload.event_id).unwrap_or_else(|_| uuid::Uuid::new_v4());
+
     sqlx::query(
         r"
         INSERT INTO telemetry (
@@ -160,7 +163,7 @@ async fn persist_telemetry(
         ON CONFLICT (event_id, measured_at) DO NOTHING
         ",
     )
-    .bind(&payload.event_id)
+    .bind(parsed_event_id)
     .bind(i32::try_from(payload.protocol_version).unwrap_or(1))
     .bind(i32::try_from(payload.schema_version).unwrap_or(1))
     .bind(&payload.gateway_id)
@@ -195,6 +198,8 @@ async fn handle_poison_pill(
     error_reason: &str,
     event_id: Option<&str>,
 ) {
+    let parsed_event_id = event_id.and_then(|id| uuid::Uuid::parse_str(id).ok());
+
     let result = sqlx::query(
         r"
         INSERT INTO telemetry_dlq (raw_payload, error_reason, event_id)
@@ -203,7 +208,7 @@ async fn handle_poison_pill(
     )
     .bind(raw_payload)
     .bind(error_reason)
-    .bind(event_id)
+    .bind(parsed_event_id)
     .execute(&state.db_pool)
     .await;
 

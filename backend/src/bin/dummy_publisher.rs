@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let payload = TelemetryPayloadPb {
             protocol_version: 1,
             schema_version: 1,
-            event_id: format!("dummy-evt-{sequence}"),
+            event_id: format!("00000000-0000-0000-0000-{sequence:012x}"),
             gateway_id: "Gtw-Lab-01".to_string(),
             device_id: "ESP32-P4-Test".to_string(),
             node_sequence: sequence,
