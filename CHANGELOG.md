@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Repository Governance**: `AGENTS.md` upgraded to maximum industrial standards, explicitly banning Go, strictly enforcing Rust pedantic `clippy` rules, and mandating strict GitHub workflow practices (1 PR = 1 Purpose, CI blocks, Squash merges).
 - **Mega-Schema Convergence**: Updated references and Protobuf validation to handle the full 21-field payload consistently across the full stack.
 
+### Fixed
+- **API CORS & IP Extraction**: Fixed 500 Internal Server Error in `tower_governor` by explicitly providing `ConnectInfo<SocketAddr>` to Axum router via `into_make_service_with_connect_info`.
+- **Pub/Sub Emulator Hang**: Fixed an issue where `google-cloud-pubsub` would silently hang on startup attempting to resolve Application Default Credentials (ADC). Bypassed using anonymous credentials explicitly for the `PUBSUB_EMULATOR_HOST`.
+- **Database Ingestion Typos**: Fixed a fatal crash in `persist_telemetry` where UUID columns were incorrectly bound to raw Strings from `dummy_publisher` (e.g., `dummy-evt-1`). Enforced `uuid::Uuid::parse_str()` and valid UUID generation to ensure safe insertion into `telemetry` and `telemetry_dlq`.
+
 ## [0.7.0] - 2026-09-04
 
 ### Changed
