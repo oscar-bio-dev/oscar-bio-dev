@@ -76,7 +76,7 @@ pub fn Chatbot() -> impl IntoView {
                     set_messages.update(|m| {
                         m.push(ChatMessage {
                             sender: "System".to_string(),
-                            text: format!("Network Error: {}", e),
+                            text: format!("Network Error: {e}"),
                         })
                     });
                 }

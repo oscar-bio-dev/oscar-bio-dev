@@ -11,8 +11,12 @@ use tokio::time::Duration;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new();
-    let topic_url =
-        "http://localhost:8085/v1/projects/oscar-bio-dev-project/topics/room-telemetry:publish";
+    let base_topic_url =
+        "http://localhost:8085/v1/projects/oscar-bio-dev-project/topics/room-telemetry";
+    let topic_url = format!("{base_topic_url}:publish");
+
+    // Ensure topic exists in the emulator
+    let _ = client.put(base_topic_url).send().await;
 
     let mut sequence = 1;
     println!("Starting Dummy Publisher...");
@@ -58,7 +62,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ]
         });
 
-        match client.post(topic_url).json(&body).send().await {
+        match client.post(&topic_url).json(&body).send().await {
             Ok(res) if res.status().is_success() => {
                 println!(
                     "Published Event {sequence} -> CO2: {} ppm, Temp: {:.1} °C",

@@ -48,6 +48,11 @@ impl TryFrom<f64> for Ph {
 impl Ph {
     pub const MIN: f64 = 0.0;
     pub const MAX: f64 = 14.0;
+    /// Crea una nueva instancia.
+    ///
+    /// # Errors
+    ///
+    /// Devuelve `TelemetryError` si el valor está fuera del rango permitido.
     pub fn new(value: f64) -> Result<Self, TelemetryError> {
         if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
             Err(TelemetryError::Ph(value))
@@ -76,6 +81,11 @@ impl TryFrom<f64> for DissolvedOxygen {
 impl DissolvedOxygen {
     pub const MIN: f64 = 0.0;
     pub const MAX: f64 = 40.0;
+    /// Crea una nueva instancia.
+    ///
+    /// # Errors
+    ///
+    /// Devuelve `TelemetryError` si el valor está fuera del rango permitido.
     pub fn new(value: f64) -> Result<Self, TelemetryError> {
         if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
             Err(TelemetryError::DissolvedOxygen(value))
@@ -104,6 +114,11 @@ impl TryFrom<f64> for Temperature {
 impl Temperature {
     pub const MIN: f64 = -50.0;
     pub const MAX: f64 = 150.0;
+    /// Crea una nueva instancia.
+    ///
+    /// # Errors
+    ///
+    /// Devuelve `TelemetryError` si el valor está fuera del rango permitido.
     pub fn new(value: f64) -> Result<Self, TelemetryError> {
         if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
             Err(TelemetryError::Temperature(value))
@@ -132,6 +147,11 @@ impl TryFrom<f64> for Humidity {
 impl Humidity {
     pub const MIN: f64 = 0.0;
     pub const MAX: f64 = 100.0;
+    /// Crea una nueva instancia.
+    ///
+    /// # Errors
+    ///
+    /// Devuelve `TelemetryError` si el valor está fuera del rango permitido.
     pub fn new(value: f64) -> Result<Self, TelemetryError> {
         if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
             Err(TelemetryError::Humidity(value))
@@ -160,6 +180,11 @@ impl TryFrom<f64> for Pressure {
 impl Pressure {
     pub const MIN: f64 = 300.0;
     pub const MAX: f64 = 1100.0;
+    /// Crea una nueva instancia.
+    ///
+    /// # Errors
+    ///
+    /// Devuelve `TelemetryError` si el valor está fuera del rango permitido.
     pub fn new(value: f64) -> Result<Self, TelemetryError> {
         if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
             Err(TelemetryError::Pressure(value))
@@ -188,6 +213,11 @@ impl TryFrom<f64> for GasResistance {
 impl GasResistance {
     pub const MIN: f64 = 0.0;
     pub const MAX: f64 = 50_000_000.0;
+    /// Crea una nueva instancia.
+    ///
+    /// # Errors
+    ///
+    /// Devuelve `TelemetryError` si el valor está fuera del rango permitido.
     pub fn new(value: f64) -> Result<Self, TelemetryError> {
         if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
             Err(TelemetryError::GasResistance(value))
@@ -216,6 +246,11 @@ impl TryFrom<f64> for Co2 {
 impl Co2 {
     pub const MIN: f64 = 0.0;
     pub const MAX: f64 = 40_000.0;
+    /// Crea una nueva instancia.
+    ///
+    /// # Errors
+    ///
+    /// Devuelve `TelemetryError` si el valor está fuera del rango permitido.
     pub fn new(value: f64) -> Result<Self, TelemetryError> {
         if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
             Err(TelemetryError::Co2(value))
@@ -244,6 +279,11 @@ impl TryFrom<f64> for Iaq {
 impl Iaq {
     pub const MIN: f64 = 0.0;
     pub const MAX: f64 = 500.0;
+    /// Crea una nueva instancia.
+    ///
+    /// # Errors
+    ///
+    /// Devuelve `TelemetryError` si el valor está fuera del rango permitido.
     pub fn new(value: f64) -> Result<Self, TelemetryError> {
         if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
             Err(TelemetryError::Iaq(value))
@@ -272,6 +312,11 @@ impl TryFrom<f64> for Pm1_0 {
 impl Pm1_0 {
     pub const MIN: f64 = 0.0;
     pub const MAX: f64 = 1000.0;
+    /// Crea una nueva instancia.
+    ///
+    /// # Errors
+    ///
+    /// Devuelve `TelemetryError` si el valor está fuera del rango permitido.
     pub fn new(value: f64) -> Result<Self, TelemetryError> {
         if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
             Err(TelemetryError::Pm1_0(value))
@@ -300,6 +345,11 @@ impl TryFrom<f64> for Pm2_5 {
 impl Pm2_5 {
     pub const MIN: f64 = 0.0;
     pub const MAX: f64 = 1000.0;
+    /// Crea una nueva instancia.
+    ///
+    /// # Errors
+    ///
+    /// Devuelve `TelemetryError` si el valor está fuera del rango permitido.
     pub fn new(value: f64) -> Result<Self, TelemetryError> {
         if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
             Err(TelemetryError::Pm2_5(value))
@@ -328,6 +378,11 @@ impl TryFrom<f64> for Pm10_0 {
 impl Pm10_0 {
     pub const MIN: f64 = 0.0;
     pub const MAX: f64 = 1000.0;
+    /// Crea una nueva instancia.
+    ///
+    /// # Errors
+    ///
+    /// Devuelve `TelemetryError` si el valor está fuera del rango permitido.
     pub fn new(value: f64) -> Result<Self, TelemetryError> {
         if value.is_nan() || !(Self::MIN..=Self::MAX).contains(&value) {
             Err(TelemetryError::Pm10_0(value))
@@ -529,7 +584,7 @@ impl TryFrom<TelemetryPayloadPb> for TelemetryPayload {
 
 /// Evento de salud del Edge Telemetry Gateway (ESP32-P4).
 /// Publicado independientemente de la telemetría de los nodos.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema, Validate)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema, Validate)]
 pub struct GatewayHealthEvent {
     /// ID del gateway (MAC del ESP32-P4)
     #[schema(example = "gateway-AA:BB:CC:DD:EE:FF")]
@@ -565,7 +620,7 @@ pub struct GatewayHealthEvent {
 }
 
 /// DTO Protobuf para el evento de salud del Gateway.
-#[derive(Clone, PartialEq, prost::Message)]
+#[derive(Clone, PartialEq, Eq, prost::Message)]
 pub struct GatewayHealthEventPb {
     #[prost(string, tag = "1")]
     pub gateway_id: String,

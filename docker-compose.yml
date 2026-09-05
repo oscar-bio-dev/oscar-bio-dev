@@ -6,7 +6,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: oscar_bio_dev
-    # Removed ports 5432:5432 for security (only accessible within docker network or via proxy)
+    ports:
+      - "5432:5432"
     volumes:
       - timescaledb_data:/home/postgres/pgdata/data
     restart: always
