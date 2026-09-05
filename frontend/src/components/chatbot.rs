@@ -40,7 +40,11 @@ pub fn Chatbot() -> impl IntoView {
             let location = window.location();
             let host = location.host().expect("should have a host");
             let protocol = location.protocol().expect("should have a protocol");
-            let api_url = format!("{protocol}//{host}/api/chat");
+            let api_url = if host.contains("localhost") || host.contains("127.0.0.1") {
+                "http://127.0.0.1:3000/api/chat".to_string()
+            } else {
+                format!("{protocol}//{host}/api/chat")
+            };
 
             let client = reqwest::Client::new();
             let res = client.post(&api_url).json(&req_body).send().await;

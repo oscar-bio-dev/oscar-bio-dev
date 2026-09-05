@@ -52,7 +52,11 @@ pub fn RoomMonitoring() -> impl IntoView {
         let host = location.host().expect("should have a host");
         let protocol = location.protocol().expect("should have a protocol");
         let ws_protocol = if protocol == "https:" { "wss:" } else { "ws:" };
-        let ws_url = format!("{ws_protocol}//{host}/api/ws");
+        let ws_url = if host.contains("localhost") || host.contains("127.0.0.1") {
+            "ws://127.0.0.1:3000/api/ws".to_string()
+        } else {
+            format!("{ws_protocol}//{host}/api/ws")
+        };
 
         set_conn_status.set(ConnectionStatus::Connecting);
 

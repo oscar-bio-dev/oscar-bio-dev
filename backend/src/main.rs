@@ -150,7 +150,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let cors_layer = CorsLayer::new()
-        .allow_origin("https://oscar-bio.dev".parse::<axum::http::HeaderValue>()?)
+        .allow_origin(Any)
         .allow_methods([Method::GET, Method::POST])
         .allow_headers(Any);
 
