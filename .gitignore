@@ -39,3 +39,4 @@ frontend/dist/
 
 # Firebase cache
 .firebase/
+*.log
