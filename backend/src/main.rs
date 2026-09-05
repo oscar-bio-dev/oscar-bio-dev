@@ -201,8 +201,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Servidor web público iniciado en http://{}", public_addr);
 
     // Shutdown gracefully
-    let axum_server = axum::serve(listener, public_app.into_make_service())
-        .with_graceful_shutdown(shutdown_signal());
+    let axum_server = axum::serve(
+        listener,
+        public_app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal());
 
     axum_server.await?;
 
