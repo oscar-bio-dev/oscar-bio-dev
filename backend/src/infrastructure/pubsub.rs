@@ -10,6 +10,7 @@ use shared::{TelemetryPayload, TelemetryPayloadPb};
 use validator::Validate;
 
 /// Starts the Pub/Sub subscriber in the background.
+#[allow(clippy::too_many_lines)]
 pub async fn start_pubsub_worker(state: AppState) -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Inicializando Pub/Sub Subscriber...");
 
@@ -19,6 +20,16 @@ pub async fn start_pubsub_worker(state: AppState) -> Result<(), Box<dyn std::err
     let subscription_name = std::env::var("PUBSUB_SUBSCRIPTION_NAME").unwrap_or_else(|_| {
         "projects/oscar-bio-dev-project/subscriptions/room-telemetry-sub".to_string()
     });
+
+    // Auto-provision en entorno local si usamos el emulador
+    if let Ok(emulator_host) = std::env::var("PUBSUB_EMULATOR_HOST") {
+        tracing::info!("Modo Emulador: Auto-aprovisionando subscripción {}...", subscription_name);
+        let client = reqwest::Client::new();
+        let sub_url = format!("http://{emulator_host}/v1/{subscription_name}");
+        let topic_name = "projects/oscar-bio-dev-project/topics/room-telemetry";
+        let payload = serde_json::json!({ "topic": topic_name });
+        let _ = client.put(&sub_url).json(&payload).send().await;
+    }
 
     tracing::info!("Pub/Sub Worker configurado para escuchar en {}...", subscription_name);
 
