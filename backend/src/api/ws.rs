@@ -35,6 +35,17 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
     let mut rx_telemetry = state.tx_ws.subscribe();
 
     let mut send_task = tokio::spawn(async move {
+        // 1. Enviar el estado actual del gemelo digital apenas se conecta
+        {
+            let twin = state.digital_twin.read().await;
+            for (_, payload) in twin.iter() {
+                if let Ok(json_str) = serde_json::to_string(payload) {
+                    let _ = sender.send(Message::Text(json_str)).await;
+                }
+            }
+        }
+
+        // 2. Loop principal de streaming en vivo
         loop {
             match rx_telemetry.recv().await {
                 Ok(payload) => {
