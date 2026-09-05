@@ -7,6 +7,8 @@ port = 8080
 open = false
 
 [[proxy]]
-backend = "http://127.0.0.1:3000/api"
-rewrite = "/api"
+backend = "ws://127.0.0.1:3000/api/ws"
 ws = true
+
+[[proxy]]
+backend = "http://127.0.0.1:3000/api"
