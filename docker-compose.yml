@@ -17,7 +17,7 @@ services:
     container_name: pubsub_emulator
     command: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085
     ports:
-      - "127.0.0.1:8085:8085"
+      - "0.0.0.0:8085:8085"
     restart: always
 
 volumes:
