@@ -149,10 +149,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .ok_or("Invalid chat governor config")?,
     );
 
-    let cors_layer = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods([Method::GET, Method::POST])
-        .allow_headers(Any);
+    let cors_layer = std::env::var("CORS_ORIGIN").map_or_else(
+        |_| {
+            tracing::warn!(
+                "CORS_ORIGIN no configurado — permitiendo cualquier origen (solo para desarrollo)"
+            );
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods([Method::GET, Method::POST])
+                .allow_headers(Any)
+        },
+        |origin| {
+            tracing::info!("CORS restringido a origen: {}", origin);
+            CorsLayer::new()
+                .allow_origin(
+                    origin.parse::<axum::http::HeaderValue>().expect("CORS_ORIGIN inválido"),
+                )
+                .allow_methods([Method::GET, Method::POST])
+                .allow_headers(Any)
+        },
+    );
 
     let public_app = Router::new()
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))

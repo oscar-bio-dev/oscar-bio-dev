@@ -30,15 +30,16 @@ pub async fn liveness_probe() -> impl IntoResponse {
 )]
 /// Endpoint de readiness probe para Kubernetes.
 /// Devuelve 200 OK si el servidor y la base de datos están listos.
-#[allow(clippy::unused_async)]
 pub async fn readiness_probe(State(state): State<AppState>) -> impl IntoResponse {
-    // Verificamos que el pool de conexiones no esté cerrado
-    if state.db_pool.is_closed() {
-        (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(serde_json::json!({ "status": "down", "reason": "db_pool_closed" })),
-        )
-    } else {
-        (StatusCode::OK, Json(serde_json::json!({ "status": "up" })))
+    // Verificamos conectividad real contra la base de datos
+    match sqlx::query_scalar::<_, i32>("SELECT 1").fetch_one(&state.db_pool).await {
+        Ok(_) => (StatusCode::OK, Json(serde_json::json!({ "status": "up" }))),
+        Err(e) => {
+            tracing::error!("Readiness probe falló: {}", e);
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({ "status": "down", "reason": format!("db: {e}") })),
+            )
+        }
     }
 }

@@ -30,12 +30,19 @@ pub async fn start_pubsub_worker(state: AppState) -> Result<(), Box<dyn std::err
 
     // Auto-provision en entorno local si usamos el emulador
     if let Ok(emulator_host) = std::env::var("PUBSUB_EMULATOR_HOST") {
-        tracing::info!("Modo Emulador: Auto-aprovisionando subscripción {}...", subscription_name);
-        let client = reqwest::Client::new();
-        let sub_url = format!("http://{emulator_host}/v1/{subscription_name}");
+        let http = reqwest::Client::new();
         let topic_name = "projects/oscar-bio-dev-project/topics/room-telemetry";
+
+        // 1. Crear el Topic (idempotente: PUT retorna 409 si ya existe)
+        let topic_url = format!("http://{emulator_host}/v1/{topic_name}");
+        tracing::info!("Modo Emulador: Auto-aprovisionando topic {topic_name}...");
+        let _ = http.put(&topic_url).send().await;
+
+        // 2. Crear la Suscripción (idempotente: PUT retorna 409 si ya existe)
+        tracing::info!("Modo Emulador: Auto-aprovisionando subscripción {}...", subscription_name);
+        let sub_url = format!("http://{emulator_host}/v1/{subscription_name}");
         let payload = serde_json::json!({ "topic": topic_name });
-        let _ = client.put(&sub_url).json(&payload).send().await;
+        let _ = http.put(&sub_url).json(&payload).send().await;
     }
 
     tracing::info!("Pub/Sub Worker configurado para escuchar en {}...", subscription_name);
