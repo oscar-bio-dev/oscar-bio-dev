@@ -29,17 +29,25 @@ pub async fn liveness_probe() -> impl IntoResponse {
     )
 )]
 /// Endpoint de readiness probe para Kubernetes.
-/// Devuelve 200 OK si el servidor y la base de datos están listos.
+/// Devuelve 200 OK si el servidor, la base de datos, y el Pub/Sub worker están listos.
 pub async fn readiness_probe(State(state): State<AppState>) -> impl IntoResponse {
-    // Verificamos conectividad real contra la base de datos
-    match sqlx::query_scalar::<_, i32>("SELECT 1").fetch_one(&state.db_pool).await {
-        Ok(_) => (StatusCode::OK, Json(serde_json::json!({ "status": "up" }))),
-        Err(e) => {
-            tracing::error!("Readiness probe falló: {}", e);
-            (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(serde_json::json!({ "status": "down", "reason": format!("db: {e}") })),
-            )
-        }
+    use std::sync::atomic::Ordering;
+
+    let db_ok = sqlx::query_scalar::<_, i32>("SELECT 1").fetch_one(&state.db_pool).await.is_ok();
+
+    let pubsub_ok = state.pubsub_ready.load(Ordering::SeqCst);
+
+    if db_ok && pubsub_ok {
+        (StatusCode::OK, Json(serde_json::json!({ "status": "up" })))
+    } else {
+        tracing::error!("Readiness probe falló: db_ok={}, pubsub_ok={}", db_ok, pubsub_ok);
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({
+                "status": "down",
+                "db_ready": db_ok,
+                "pubsub_ready": pubsub_ok
+            })),
+        )
     }
 }

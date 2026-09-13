@@ -9,15 +9,129 @@ use prost::Message;
 use shared::{TelemetryPayload, TelemetryPayloadPb};
 use validator::Validate;
 
-/// Starts the Pub/Sub subscriber in the background.
+/// Starts the Pub/Sub subscriber in the background con exponential backoff and graceful shutdown.
 #[allow(clippy::too_many_lines)]
-pub async fn start_pubsub_worker(state: AppState) -> Result<(), Box<dyn std::error::Error>> {
-    tracing::info!("Inicializando Pub/Sub Subscriber...");
+pub async fn start_pubsub_worker(
+    state: AppState,
+    mut shutdown_rx: tokio::sync::broadcast::Receiver<()>,
+) {
+    let mut backoff = std::time::Duration::from_secs(1);
+    let max_backoff = std::time::Duration::from_secs(60);
 
-    // Configuramos el cliente (soporte para emulador)
+    loop {
+        tracing::info!("Intentando conectar a Pub/Sub...");
+
+        match try_init_pubsub().await {
+            Ok((client, subscription_name)) => {
+                tracing::info!("Conectado a Pub/Sub en {}. Iniciando stream...", subscription_name);
+                state.pubsub_ready.store(true, std::sync::atomic::Ordering::SeqCst);
+
+                backoff = std::time::Duration::from_secs(1);
+
+                let mut stream = client.subscribe(&subscription_name).build();
+
+                loop {
+                    tokio::select! {
+                        _ = shutdown_rx.recv() => {
+                            tracing::info!("Señal de apagado recibida en Pub/Sub Worker. Saliendo...");
+                            state.pubsub_ready.store(false, std::sync::atomic::Ordering::SeqCst);
+                            return;
+                        }
+                        res = stream.next() => {
+                            match res {
+                                Some(Ok((message, handler))) => {
+                                    let msg_id = message.message_id.clone();
+                                    tracing::debug!("Recibido mensaje de Pub/Sub (ID: {})", msg_id);
+
+                                    let pb_dto = match TelemetryPayloadPb::decode(message.data.as_ref()) {
+                                        Ok(dto) => dto,
+                                        Err(e) => {
+                                            tracing::error!("Poison Pill (Protobuf inválido). Msg ID: {}, Error: {}", msg_id, e);
+                                            handle_poison_pill(&state, message.data.to_vec(), "Invalid Protobuf", None).await;
+                                            handler.ack();
+                                            continue;
+                                        }
+                                    };
+
+                                    let payload: TelemetryPayload = match pb_dto.try_into() {
+                                        Ok(p) => p,
+                                        Err(e) => {
+                                            tracing::error!("Poison Pill (Dominio inválido). Msg ID: {}, Error: {}", msg_id, e);
+                                            handle_poison_pill(&state, message.data.to_vec(), &format!("Domain validation failed: {e}"), None).await;
+                                            handler.ack();
+                                            continue;
+                                        }
+                                    };
+
+                                    if let Err(e) = payload.validate() {
+                                        tracing::error!("Poison Pill (Validación estricta fallida). Msg ID: {}, Error: {}", msg_id, e);
+                                        handle_poison_pill(&state, message.data.to_vec(), &format!("Strict validation failed: {e}"), Some(&payload.event_id)).await;
+                                        handler.ack();
+                                        continue;
+                                    }
+
+                                    let event_id = payload.event_id.clone();
+
+                                    {
+                                        let mut twin = state.digital_twin.write().await;
+                                        twin.put(payload.device_id.clone(), payload.clone());
+                                    }
+
+                                    let _ = state.tx_ws.send(payload.clone());
+
+                                    match persist_telemetry(&state, &payload).await {
+                                        Ok(()) => {
+                                            tracing::info!("Mensaje {} persistido exitosamente (ACK)", msg_id);
+                                            handler.ack();
+                                        }
+                                        Err(e) => {
+                                            tracing::error!("Fallo de Infraestructura (TimescaleDB). Haciendo NACK del mensaje {} (Event: {}). Error: {}", msg_id, event_id, e);
+                                            handler.nack();
+                                        }
+                                    }
+                                }
+                                Some(Err(e)) => {
+                                    tracing::error!("Fallo en stream de Pub/Sub: {}", e);
+                                    break;
+                                }
+                                None => {
+                                    tracing::warn!("Stream de Pub/Sub cerrado por el servidor.");
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                state.pubsub_ready.store(false, std::sync::atomic::Ordering::SeqCst);
+            }
+            Err(e) => {
+                tracing::error!(
+                    "Fallo al inicializar Pub/Sub: {}. Reintentando en {:?}",
+                    e,
+                    backoff
+                );
+            }
+        }
+
+        tokio::select! {
+            _ = shutdown_rx.recv() => {
+                tracing::info!("Señal de apagado recibida durante backoff. Saliendo...");
+                return;
+            }
+            () = tokio::time::sleep(backoff) => {
+                backoff = std::cmp::min(backoff * 2, max_backoff);
+            }
+        }
+    }
+}
+
+async fn try_init_pubsub() -> Result<
+    (google_cloud_pubsub::client::Subscriber, String),
+    Box<dyn std::error::Error + Send + Sync>,
+> {
     let mut builder = Subscriber::builder();
     if let Ok(emulator_host) = std::env::var("PUBSUB_EMULATOR_HOST") {
-        tracing::info!("Usando emulador Pub/Sub en: {}", emulator_host);
         let endpoint = format!("http://{emulator_host}");
         let anon = google_cloud_auth::credentials::anonymous::Builder::new().build();
         builder = builder.with_endpoint(endpoint).with_credentials(anon);
@@ -28,126 +142,19 @@ pub async fn start_pubsub_worker(state: AppState) -> Result<(), Box<dyn std::err
         "projects/oscar-bio-dev-project/subscriptions/room-telemetry-sub".to_string()
     });
 
-    // Auto-provision en entorno local si usamos el emulador
     if let Ok(emulator_host) = std::env::var("PUBSUB_EMULATOR_HOST") {
         let http = reqwest::Client::new();
         let topic_name = "projects/oscar-bio-dev-project/topics/room-telemetry";
 
-        // 1. Crear el Topic (idempotente: PUT retorna 409 si ya existe)
         let topic_url = format!("http://{emulator_host}/v1/{topic_name}");
-        tracing::info!("Modo Emulador: Auto-aprovisionando topic {topic_name}...");
         let _ = http.put(&topic_url).send().await;
 
-        // 2. Crear la Suscripción (idempotente: PUT retorna 409 si ya existe)
-        tracing::info!("Modo Emulador: Auto-aprovisionando subscripción {}...", subscription_name);
         let sub_url = format!("http://{emulator_host}/v1/{subscription_name}");
         let payload = serde_json::json!({ "topic": topic_name });
         let _ = http.put(&sub_url).json(&payload).send().await;
     }
 
-    tracing::info!("Pub/Sub Worker configurado para escuchar en {}...", subscription_name);
-
-    // Iniciamos la recepción de mensajes en background
-    tokio::spawn(async move {
-        let mut stream = client.subscribe(&subscription_name).build();
-
-        while let Some(res) = stream.next().await {
-            match res {
-                Ok((message, handler)) => {
-                    let msg_id = message.message_id.clone();
-                    tracing::debug!("Recibido mensaje de Pub/Sub (ID: {})", msg_id);
-
-                    // 1. Decodificar Protobuf
-                    let pb_dto = match TelemetryPayloadPb::decode(message.data.as_ref()) {
-                        Ok(dto) => dto,
-                        Err(e) => {
-                            tracing::error!(
-                                "Poison Pill (Protobuf inválido). Msg ID: {}, Error: {}",
-                                msg_id,
-                                e
-                            );
-                            handle_poison_pill(
-                                &state,
-                                message.data.to_vec(),
-                                "Invalid Protobuf",
-                                None,
-                            )
-                            .await;
-                            handler.ack();
-                            continue;
-                        }
-                    };
-
-                    // 2. Mapear a dominio
-                    let payload: TelemetryPayload = match pb_dto.try_into() {
-                        Ok(p) => p,
-                        Err(e) => {
-                            tracing::error!(
-                                "Poison Pill (Dominio inválido). Msg ID: {}, Error: {}",
-                                msg_id,
-                                e
-                            );
-                            handle_poison_pill(
-                                &state,
-                                message.data.to_vec(),
-                                &format!("Domain validation failed: {e}"),
-                                None,
-                            )
-                            .await;
-                            handler.ack();
-                            continue;
-                        }
-                    };
-
-                    // 3. Validar payload (Validator)
-                    if let Err(e) = payload.validate() {
-                        tracing::error!(
-                            "Poison Pill (Validación estricta fallida). Msg ID: {}, Error: {}",
-                            msg_id,
-                            e
-                        );
-                        handle_poison_pill(
-                            &state,
-                            message.data.to_vec(),
-                            &format!("Strict validation failed: {e}"),
-                            Some(&payload.event_id),
-                        )
-                        .await;
-                        handler.ack();
-                        continue;
-                    }
-
-                    let event_id = payload.event_id.clone();
-
-                    // 4. Actualizamos el Gemelo Digital en RAM
-                    {
-                        let mut twin = state.digital_twin.write().await;
-                        twin.put(payload.device_id.clone(), payload.clone());
-                    }
-
-                    // 5. Broadcast vía WebSockets
-                    let _ = state.tx_ws.send(payload.clone());
-
-                    // 6. Inserción directa en Base de Datos (con idempotencia)
-                    match persist_telemetry(&state, &payload).await {
-                        Ok(()) => {
-                            tracing::info!("Mensaje {} persistido exitosamente (ACK)", msg_id);
-                            handler.ack();
-                        }
-                        Err(e) => {
-                            tracing::error!("Fallo de Infraestructura (TimescaleDB). Haciendo NACK del mensaje {} (Event: {}). Error: {}", msg_id, event_id, e);
-                            handler.nack(); // El broker aplicará backoff exponencial
-                        }
-                    }
-                }
-                Err(e) => {
-                    tracing::error!("Fallo al recibir mensaje de Pub/Sub stream: {}", e);
-                }
-            }
-        }
-    });
-
-    Ok(())
+    Ok((client, subscription_name))
 }
 
 /// Inserta la telemetría en `TimescaleDB`. Retorna error si la DB falla.

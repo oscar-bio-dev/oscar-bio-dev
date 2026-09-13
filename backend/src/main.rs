@@ -126,10 +126,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Estado concurrente
     let app_state = AppState::new(db_pool.clone(), tx_ws);
 
+    let (tx_shutdown, rx_shutdown) = tokio::sync::broadcast::channel::<()>(1);
+
     // Iniciar el worker de Pub/Sub en background
-    if let Err(e) = backend::infrastructure::pubsub::start_pubsub_worker(app_state.clone()).await {
-        tracing::error!("No se pudo inicializar Pub/Sub Worker: {}", e);
-    }
+    let pubsub_handle = tokio::spawn(backend::infrastructure::pubsub::start_pubsub_worker(
+        app_state.clone(),
+        rx_shutdown,
+    ));
 
     // Configurar rate limiting para la API pública (ej. 2 requests por segundo, burst de 10)
     let governor_conf = Arc::new(
@@ -224,6 +227,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .with_graceful_shutdown(shutdown_signal());
 
     axum_server.await?;
+
+    tracing::info!("Servidor web detenido. Notificando a workers para apagar...");
+    let _ = tx_shutdown.send(());
+
+    tracing::info!("Esperando a que Pub/Sub Worker termine...");
+    let _ = pubsub_handle.await;
+
+    tracing::info!("Cerrando pool de base de datos...");
+    app_state.db_pool.close().await;
+
+    tracing::info!("Apagado limpio completado.");
 
     Ok(())
 }

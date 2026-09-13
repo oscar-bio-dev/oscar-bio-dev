@@ -13,6 +13,8 @@ use std::num::NonZeroUsize;
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 
+use std::sync::atomic::AtomicBool;
+
 /// Estado global de la aplicación inyectado en las rutas de Axum.
 #[derive(Debug, Clone)]
 pub struct AppState {
@@ -24,6 +26,8 @@ pub struct AppState {
     pub db_pool: PgPool,
     /// Canal broadcast para notificar telemetría en tiempo real a `WebSockets`.
     pub tx_ws: broadcast::Sender<TelemetryPayload>,
+    /// Indicador de salud (Readiness) del cliente de Pub/Sub.
+    pub pubsub_ready: Arc<AtomicBool>,
 }
 
 impl AppState {
@@ -34,6 +38,7 @@ impl AppState {
             digital_twin: Arc::new(RwLock::new(LruCache::new(NonZeroUsize::new(10_000).unwrap()))),
             db_pool,
             tx_ws,
+            pubsub_ready: Arc::new(AtomicBool::new(false)),
         }
     }
 }
