@@ -16,7 +16,7 @@ use tokio::sync::{broadcast, RwLock};
 use std::sync::atomic::AtomicBool;
 
 /// Estado global de la aplicación inyectado en las rutas de Axum.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AppState {
     /// Buffer en RAM de las últimas lecturas de telemetría de cada sensor.
     /// Funciona como el gemelo digital en tiempo real de la flota física.
