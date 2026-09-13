@@ -34,8 +34,8 @@ use utoipa_swagger_ui::SwaggerUi;
 #[openapi(
     paths(
         backend::api::digital_twin::get_digital_twin,
-        backend::api::digital_twin::get_digital_twin,
-        backend::api::chat::chat_with_twin
+        backend::api::chat::chat_with_twin,
+        backend::api::dlq::get_recent_dlq
     ),
     components(
         schemas(
@@ -53,7 +53,8 @@ use utoipa_swagger_ui::SwaggerUi;
             shared::Pm10_0,
             shared::GatewayHealthEvent,
             backend::api::chat::ChatRequest,
-            backend::api::chat::ChatResponse
+            backend::api::chat::ChatResponse,
+            backend::api::dlq::DlqRecordDto
         )
     ),tags(
         (name = "telemetry", description = "Endpoints para sensores ambientales"),
@@ -184,6 +185,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .layer(GovernorLayer { config: chat_governor_conf }),
         )
         .route("/api/ws", axum::routing::get(backend::api::ws::ws_handler))
+        .nest("/api/dlq", backend::api::dlq::router())
         .route_layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
             backend::api::auth::auth_middleware,

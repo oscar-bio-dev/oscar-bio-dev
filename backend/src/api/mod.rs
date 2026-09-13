@@ -10,6 +10,8 @@ pub mod auth;
 pub mod chat;
 /// Submódulo encargado de la lectura global del gemelo digital.
 pub mod digital_twin;
+/// Submódulo encargado de la Dead Letter Queue (DLQ).
+pub mod dlq;
 /// Submódulo de Kubernetes Probes
 pub mod health;
 /// Submódulo encargado del streaming y control en tiempo real.

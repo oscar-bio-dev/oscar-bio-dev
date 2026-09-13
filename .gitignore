@@ -12,6 +12,7 @@ debug/
 .env.local
 .env.*
 !.env.example
+.ledger.md
 
 # IDEs and Editors
 .vscode/

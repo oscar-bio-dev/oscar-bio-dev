@@ -7,6 +7,17 @@ use leptos::*;
 use shared::TelemetryPayload;
 use std::collections::HashMap;
 
+#[derive(Clone, Debug, serde::Deserialize)]
+#[allow(dead_code)]
+pub struct DlqRecordDto {
+    pub id: String,
+    pub ingested_at: String,
+    pub raw_payload_base64: String,
+    pub error_reason: String,
+    pub gateway_id: Option<String>,
+    pub event_id: Option<String>,
+}
+
 #[derive(Clone, Debug)]
 pub struct DeviceState {
     pub payload: TelemetryPayload,
@@ -26,6 +37,7 @@ pub fn RoomMonitoring() -> impl IntoView {
     let (conn_status, set_conn_status) = create_signal(ConnectionStatus::Connecting);
     let (current_time, set_current_time) = create_signal(Date::now());
     let (jwt_token, set_jwt_token) = create_signal(None::<String>);
+    let (dlq_records, set_dlq_records) = create_signal(Vec::<DlqRecordDto>::new());
 
     // Timer to update current time for staleness calculation
     create_effect(move |_| {
@@ -62,6 +74,48 @@ pub fn RoomMonitoring() -> impl IntoView {
                         set_jwt_token.set(Some(token.to_string()));
                     }
                 }
+            }
+        });
+    });
+
+    // DLQ Polling (every 5 seconds)
+    create_effect(move |_| {
+        let handle = leptos::set_interval_with_handle(
+            move || {
+                let token = match jwt_token.get() {
+                    Some(t) => t,
+                    None => return,
+                };
+
+                spawn_local(async move {
+                    let window = web_sys::window().expect("no global `window` exists");
+                    let location = window.location();
+                    let host = location.host().expect("should have a host");
+                    let protocol = location.protocol().expect("should have a protocol");
+
+                    let dlq_url = if host.contains("localhost") || host.contains("127.0.0.1") {
+                        "http://127.0.0.1:3000/api/dlq/recent".to_string()
+                    } else {
+                        format!("{protocol}//{host}/api/dlq/recent")
+                    };
+
+                    if let Ok(res) = reqwest::Client::new()
+                        .get(&dlq_url)
+                        .header("Authorization", format!("Bearer {token}"))
+                        .send()
+                        .await
+                    {
+                        if let Ok(json) = res.json::<Vec<DlqRecordDto>>().await {
+                            set_dlq_records.set(json);
+                        }
+                    }
+                });
+            },
+            std::time::Duration::from_secs(5),
+        );
+        on_cleanup(move || {
+            if let Ok(h) = handle {
+                h.clear();
             }
         });
     });
@@ -212,6 +266,49 @@ pub fn RoomMonitoring() -> impl IntoView {
                     }).collect_view()}
                 </div>
             </Show>
+
+            <div style="margin-top: 3rem;">
+                <h3 class="section-title" style="color: var(--accent-red);">"Terminal de Alertas Críticas (DLQ)"</h3>
+                <div class="terminal-card" style="max-height: 400px; overflow-y: auto;">
+                    <div class="card-header" style="background-color: var(--accent-red); color: var(--bg-hard);">
+                        <span class="dot" style="background-color: var(--bg-hard);" aria-hidden="true"></span>
+                        <span class="dot" style="background-color: var(--bg-hard);" aria-hidden="true"></span>
+                        <span class="dot" style="background-color: var(--bg-hard);" aria-hidden="true"></span>
+                        <span class="filename">"poison_pills.log"</span>
+                    </div>
+                    <div class="card-body">
+                        <Show
+                            when=move || !dlq_records.get().is_empty()
+                            fallback=move || view! { <p style="color: var(--accent-green);">"[OK] No hay Poison Pills recientes en la cola."</p> }
+                        >
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid var(--border-color); color: var(--fg-muted);">
+                                        <th style="text-align: left; padding: 0.5rem;">"Timestamp"</th>
+                                        <th style="text-align: left; padding: 0.5rem;">"Gateway"</th>
+                                        <th style="text-align: left; padding: 0.5rem;">"Razón del Rechazo"</th>
+                                        <th style="text-align: left; padding: 0.5rem;">"Payload Base64"</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {move || dlq_records.get().into_iter().map(|record| {
+                                        view! {
+                                            <tr style="border-bottom: 1px dashed var(--bg-soft);">
+                                                <td style="padding: 0.5rem; color: var(--fg-dim);">{record.ingested_at}</td>
+                                                <td style="padding: 0.5rem; color: var(--accent-blue);">{record.gateway_id.unwrap_or_else(|| "Desconocido".to_string())}</td>
+                                                <td style="padding: 0.5rem; color: var(--accent-yellow); font-weight: bold;">{record.error_reason}</td>
+                                                <td style="padding: 0.5rem; color: var(--fg-muted); font-family: monospace; font-size: 0.8em; word-break: break-all; max-width: 200px;">
+                                                    {record.raw_payload_base64}
+                                                </td>
+                                            </tr>
+                                        }
+                                    }).collect_view()}
+                                </tbody>
+                            </table>
+                        </Show>
+                    </div>
+                </div>
+            </div>
         </div>
     }
 }
