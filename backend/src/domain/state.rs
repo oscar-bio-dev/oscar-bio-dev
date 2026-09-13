@@ -28,17 +28,30 @@ pub struct AppState {
     pub tx_ws: broadcast::Sender<TelemetryPayload>,
     /// Indicador de salud (Readiness) del cliente de Pub/Sub.
     pub pubsub_ready: Arc<AtomicBool>,
+    /// Llave criptográfica para firmar JWTs
+    pub jwt_encoding_key: Arc<jsonwebtoken::EncodingKey>,
+    /// Llave criptográfica para decodificar y validar JWTs
+    pub jwt_decoding_key: Arc<jsonwebtoken::DecodingKey>,
 }
 
 impl AppState {
     /// Inicializa un nuevo estado global con el pool de base de datos inyectado.
     #[must_use]
     pub fn new(db_pool: PgPool, tx_ws: broadcast::Sender<TelemetryPayload>) -> Self {
+        let jwt_secret = std::env::var("JWT_SECRET")
+            .unwrap_or_else(|_| "secret_for_local_dev_only_change_me".to_string());
+        let jwt_encoding_key =
+            Arc::new(jsonwebtoken::EncodingKey::from_secret(jwt_secret.as_bytes()));
+        let jwt_decoding_key =
+            Arc::new(jsonwebtoken::DecodingKey::from_secret(jwt_secret.as_bytes()));
+
         Self {
             digital_twin: Arc::new(RwLock::new(LruCache::new(NonZeroUsize::new(10_000).unwrap()))),
             db_pool,
             tx_ws,
             pubsub_ready: Arc::new(AtomicBool::new(false)),
+            jwt_encoding_key,
+            jwt_decoding_key,
         }
     }
 }

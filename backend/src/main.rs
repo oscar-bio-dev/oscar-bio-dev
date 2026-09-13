@@ -173,10 +173,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     );
 
-    let public_app = Router::new()
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
-        .route("/health", axum::routing::get(backend::api::health::liveness_probe))
-        .route("/ready", axum::routing::get(backend::api::health::readiness_probe))
+    let protected_routes = Router::new()
         .route(
             "/api/digital-twin",
             axum::routing::get(backend::api::digital_twin::get_digital_twin),
@@ -187,6 +184,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .layer(GovernorLayer { config: chat_governor_conf }),
         )
         .route("/api/ws", axum::routing::get(backend::api::ws::ws_handler))
+        .route_layer(axum::middleware::from_fn_with_state(
+            app_state.clone(),
+            backend::api::auth::auth_middleware,
+        ));
+
+    let public_app = Router::new()
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        .route("/health", axum::routing::get(backend::api::health::liveness_probe))
+        .route("/ready", axum::routing::get(backend::api::health::readiness_probe))
+        .route("/api/auth/mock-login", axum::routing::post(backend::api::auth::mock_login))
+        .merge(protected_routes)
         .fallback_service(
             ServeDir::new("frontend/dist")
                 .not_found_service(ServeFile::new("frontend/dist/index.html")),

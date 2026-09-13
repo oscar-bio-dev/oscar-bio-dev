@@ -25,6 +25,7 @@ pub fn RoomMonitoring() -> impl IntoView {
     let (twin_state, set_twin_state) = create_signal(HashMap::<String, DeviceState>::new());
     let (conn_status, set_conn_status) = create_signal(ConnectionStatus::Connecting);
     let (current_time, set_current_time) = create_signal(Date::now());
+    let (jwt_token, set_jwt_token) = create_signal(None::<String>);
 
     // Timer to update current time for staleness calculation
     create_effect(move |_| {
@@ -41,22 +42,54 @@ pub fn RoomMonitoring() -> impl IntoView {
         });
     });
 
+    // Fetch token on mount
+    create_effect(move |_| {
+        spawn_local(async move {
+            let window = web_sys::window().expect("no global `window` exists");
+            let location = window.location();
+            let host = location.host().expect("should have a host");
+            let protocol = location.protocol().expect("should have a protocol");
+
+            let auth_url = if host.contains("localhost") || host.contains("127.0.0.1") {
+                "http://127.0.0.1:3000/api/auth/mock-login".to_string()
+            } else {
+                format!("{protocol}//{host}/api/auth/mock-login")
+            };
+
+            if let Ok(res) = reqwest::Client::new().post(&auth_url).send().await {
+                if let Ok(json) = res.json::<serde_json::Value>().await {
+                    if let Some(token) = json.get("token").and_then(|t| t.as_str()) {
+                        set_jwt_token.set(Some(token.to_string()));
+                    }
+                }
+            }
+        });
+    });
+
     let (retry_trigger, set_retry_trigger) = create_signal(false);
 
     create_effect(move |_| {
         // Depend on retry_trigger to re-run this effect
         retry_trigger.track();
 
+        let token = match jwt_token.get() {
+            Some(t) => t,
+            None => return, // Wait until token is available
+        };
+
         let window = web_sys::window().expect("no global `window` exists");
         let location = window.location();
         let host = location.host().expect("should have a host");
         let protocol = location.protocol().expect("should have a protocol");
         let ws_protocol = if protocol == "https:" { "wss:" } else { "ws:" };
-        let ws_url = if host.contains("localhost") || host.contains("127.0.0.1") {
+
+        let ws_base = if host.contains("localhost") || host.contains("127.0.0.1") {
             "ws://127.0.0.1:3000/api/ws".to_string()
         } else {
             format!("{ws_protocol}//{host}/api/ws")
         };
+
+        let ws_url = format!("{ws_base}?token={token}");
 
         set_conn_status.set(ConnectionStatus::Connecting);
 
