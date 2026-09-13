@@ -6,6 +6,7 @@ use axum::{extract::State, routing::get, Json, Router};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+use sqlx::Row;
 
 /// DTO for a DLQ record
 #[derive(Debug, Serialize, utoipa::ToSchema)]
@@ -41,13 +42,13 @@ pub fn router() -> Router<AppState> {
     )
 )]
 async fn get_recent_dlq(State(state): State<AppState>) -> Json<Vec<DlqRecordDto>> {
-    let records = sqlx::query!(
-        r#"
+    let records = sqlx::query(
+        r"
         SELECT id, ingested_at, raw_payload, error_reason, gateway_id, event_id
         FROM telemetry_dlq
         ORDER BY ingested_at DESC
         LIMIT 50
-        "#
+        ",
     )
     .fetch_all(&state.db_pool)
     .await
@@ -56,12 +57,12 @@ async fn get_recent_dlq(State(state): State<AppState>) -> Json<Vec<DlqRecordDto>
     let dtos = records
         .into_iter()
         .map(|r| DlqRecordDto {
-            id: r.id.to_string(),
-            ingested_at: r.ingested_at,
-            raw_payload_base64: STANDARD.encode(&r.raw_payload),
-            error_reason: r.error_reason,
-            gateway_id: r.gateway_id,
-            event_id: r.event_id.map(|u| u.to_string()),
+            id: r.get::<uuid::Uuid, _>("id").to_string(),
+            ingested_at: r.get("ingested_at"),
+            raw_payload_base64: STANDARD.encode(r.get::<&[u8], _>("raw_payload")),
+            error_reason: r.get("error_reason"),
+            gateway_id: r.get("gateway_id"),
+            event_id: r.get::<Option<uuid::Uuid>, _>("event_id").map(|u| u.to_string()),
         })
         .collect();
 
